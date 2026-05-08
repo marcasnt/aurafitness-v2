@@ -207,6 +207,19 @@ export const clientsService = {
       .eq('id', id);
 
     if (error) throw error;
+
+    // Tambien insertar en tabla payments para historial formal
+    const { error: payError } = await supabase
+      .from('payments')
+      .insert({
+        client_id: id,
+        amount: profile.monthly_fee,
+        status: 'paid',
+        method: 'Confirmado en app',
+        payment_date: today,
+      });
+
+    if (payError) console.error('Error inserting payment record:', payError);
   },
 };
 
@@ -397,6 +410,33 @@ export const messagesService = {
       .single();
 
     if (error) throw error;
+
+    // Notificar al coach por email si el mensaje viene de un cliente
+    try {
+      const { data: coachProfile } = await supabase
+        .from('profiles')
+        .select('email, name')
+        .eq('id', receiverId)
+        .eq('role', 'coach')
+        .single();
+
+      if (coachProfile?.email) {
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('name')
+          .eq('id', senderId)
+          .single();
+
+        notifyService.notifyCoachNewMessage(
+          coachProfile.email,
+          senderProfile?.name || 'Cliente',
+          content
+        );
+      }
+    } catch (e) {
+      console.warn('Notification skip:', e);
+    }
+
     return {
       id: data.id,
       senderId: data.sender_id,
@@ -416,6 +456,38 @@ export const messagesService = {
       .eq('is_read', false);
 
     if (error) console.error('Error marking messages as read:', error);
+  },
+};
+
+export const notifyService = {
+  async notifyCoachNewMessage(coachEmail: string, senderName: string, content: string): Promise<void> {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-coach-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            to: coachEmail,
+            subject: `Nuevo mensaje de ${senderName}`,
+            text: `Tienes un nuevo mensaje de ${senderName} en AURA Fitness Elite:\n\n${content}`,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.warn('Email notification failed:', err);
+      }
+    } catch (e) {
+      console.warn('Email notification error:', e);
+    }
   },
 };
 

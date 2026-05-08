@@ -13,7 +13,7 @@ interface CoachDashboardProps {
   clients: User[];
   routines: RoutineDay[];
   messages: Message[];
-  onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }) => void;
+  onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }) => Promise<User | undefined>;
   onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => void;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
   onDeleteExercise: (routineDayId: string, exerciseId: string) => void;
@@ -44,6 +44,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'clients' | 'messages'>('clients');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(clients[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [clientPasswords, setClientPasswords] = useState<Record<string, string>>({});
   
   // Modals / Form States
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -133,7 +134,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       weightHistory: [{ date: new Date().toISOString().split('T')[0], weight: 75 }]
     };
 
-    onAddClient(newClient);
+    onAddClient(newClient).then((created: User | undefined) => {
+      if (created?.id) {
+        setClientPasswords(prev => ({ ...prev, [created.id]: newClientPassword }));
+        setSelectedClientId(created.id);
+      }
+    });
 
     // Reset fields
     setNewClientName('');
@@ -192,7 +198,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
   // Copy WhatsApp Access Credentials Link
   const copyWhatsAppCredentials = (client: User) => {
-    const messageText = `¡Hola ${client.name}! 💪 Aquí tienes tus credenciales premium para ingresar a AURA Elite Coaching:\n\n🌐 Enlace: https://aura-fitness-elite.vercel.app\n📧 Usuario: ${client.email}\n🔑 Contraseña: ${client.password}\n\nIngresa hoy para completar y registrar tu plan de rutina asignada. ¡Vamos por la mejor versión! 🔥🏆`;
+    const password = clientPasswords[client.id] || 'mamcyj11jm';
+    const messageText = `¡Hola ${client.name}! 💪 Aquí tienes tus credenciales premium para ingresar a AURA Elite Coaching:\n\n🌐 Enlace: https://aura-fitness-elite.vercel.app\n📧 Usuario: ${client.email}\n🔑 Contraseña: ${password}\n\nIngresa hoy para completar y registrar tu plan de rutina asignada. ¡Vamos por la mejor versión! 🔥🏆`;
     
     navigator.clipboard.writeText(messageText);
     setCopiedClientId(client.id);

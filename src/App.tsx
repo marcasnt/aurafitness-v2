@@ -160,13 +160,15 @@ export default function App() {
     setCoachProfile(null);
   };
 
-  const handleAddClient = async (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }) => {
+  const handleAddClient = async (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }): Promise<User | undefined> => {
     try {
       const created = await clientsService.create(newClient);
       if (mountedRef.current) setClients(prev => [created, ...prev]);
+      return created;
     } catch (e: any) {
       console.error('Error adding client:', e);
       showError('Error al crear cliente: ' + (e.message || 'desconocido'));
+      return undefined;
     }
   };
 
