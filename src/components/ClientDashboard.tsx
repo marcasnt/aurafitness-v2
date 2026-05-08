@@ -4,13 +4,14 @@ import { User, RoutineDay, WorkoutLog, Message } from '../types/fitness';
 
 interface Props {
   client: User; coach: User | null; routines: RoutineDay[]; logs: WorkoutLog[]; messages: Message[];
+  unreadMessages?: number;
   onAddLog: (l: WorkoutLog) => void; onSendMessage: (r: string, c: string) => void;
   onUpdateClientStreak: (id: string, s: number) => void; onAddWeightEntry: (id: string, w: number) => void;
   onUpdateClientAvatar: (id: string, file: File) => void;
   onLogout: () => void;
 }
 
-export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, onAddLog, onSendMessage, onUpdateClientStreak, onAddWeightEntry, onUpdateClientAvatar, onLogout }) => {
+export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onUpdateClientStreak, onAddWeightEntry, onUpdateClientAvatar, onLogout }) => {
   const [tab, setTab] = useState<'w'|'m'|'c'>('w');
   const ar = routines.find(r => r.clientId === client.id && r.isActive) || routines.find(r => r.clientId === client.id);
   const [expId, setExpId] = useState<string|null>(null);
@@ -134,7 +135,26 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
         </div>
       </header>
       <nav className="bg-[#121214] border-b border-[#1f1f23] flex text-center">
-        {([['w','Rutina',Dumbbell],['m','Progreso',TrendingUp],['c','Coach',MessageSquare]] as const).map(([t,l,I])=>(<button key={t} onClick={()=>setTab(t as any)} className={`flex-1 py-3 text-xs uppercase tracking-widest font-mono font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 ${tab===t?'border-[#d4f826] text-[#d4f826] bg-[#18181b]':'border-transparent text-[#71717a] hover:text-white'}`}><I className="w-3.5 h-3.5"/>{l}</button>))}
+        {(['w','m','c'] as const).map((t) => {
+          const tabs = {
+            w: { label: 'Rutina', Icon: Dumbbell },
+            m: { label: 'Progreso', Icon: TrendingUp },
+            c: { label: 'Coach', Icon: MessageSquare },
+          };
+          const { label, Icon } = tabs[t];
+          const isActive = tab === t;
+          return (
+            <button key={t} onClick={()=>setTab(t)} className={`flex-1 py-3 text-xs uppercase tracking-widest font-mono font-bold transition-all border-b-2 flex items-center justify-center gap-1.5 relative ${isActive?'border-[#d4f826] text-[#d4f826] bg-[#18181b]':'border-transparent text-[#71717a] hover:text-white'}`}>
+              <Icon className="w-3.5 h-3.5"/>
+              {label}
+              {t === 'c' && unreadMessages > 0 && (
+                <span className="absolute -top-1 right-2 sm:right-4 bg-[#ef4444] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]">
+                  {unreadMessages}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </nav>
       {/* Barra de progreso lineal (siempre visible cuando hay timer activo o reciente) */}
       {showTimer && ts > 0 && (
@@ -226,7 +246,15 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#121214] border-t border-[#27272a] grid grid-cols-3 text-center text-[10px] text-[#71717a] py-1.5 z-40">
         <button onClick={()=>setTab('w')} className={`flex flex-col items-center gap-0.5 ${tab==='w'?'text-[#d4f826]':''}`}><Dumbbell className="w-4 h-4"/><span>Rutina</span></button>
         <button onClick={()=>setTab('m')} className={`flex flex-col items-center gap-0.5 ${tab==='m'?'text-[#d4f826]':''}`}><TrendingUp className="w-4 h-4"/><span>Pesos</span></button>
-        <button onClick={()=>setTab('c')} className={`flex flex-col items-center gap-0.5 ${tab==='c'?'text-[#d4f826]':''}`}><MessageSquare className="w-4 h-4"/><span>Coach</span></button>
+        <button onClick={()=>setTab('c')} className={`flex flex-col items-center gap-0.5 relative ${tab==='c'?'text-[#d4f826]':''}`}>
+          <MessageSquare className="w-4 h-4"/>
+          <span>Coach</span>
+          {unreadMessages > 0 && (
+            <span className="absolute -top-1 right-2 bg-[#ef4444] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]">
+              {unreadMessages}
+            </span>
+          )}
+        </button>
       </div>
     </div>
   );

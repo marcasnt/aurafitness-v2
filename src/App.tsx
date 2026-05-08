@@ -20,6 +20,7 @@ export default function App() {
   const [routines, setRoutines] = useState<RoutineDay[]>([]);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [coachProfile, setCoachProfile] = useState<User | null>(null);
@@ -72,10 +73,10 @@ export default function App() {
   const loadMessages = useCallback(async () => {
     if (!currentUser) return;
     try {
+      let allMessages: Message[] = [];
       if (currentUser.role === 'coach') {
         const currentClients = await clientsService.getAll();
         if (mountedRef.current) setClients(currentClients);
-        const allMessages: Message[] = [];
         for (const client of currentClients) {
           try {
             const cm = await messagesService.getByClient(client.id, currentUser.id);
@@ -84,14 +85,19 @@ export default function App() {
             console.warn(`Error loading messages for ${client.id}:`, err);
           }
         }
-        if (mountedRef.current) setMessages(allMessages);
       } else {
         const coach = await authService.getCoach();
         if (coach && mountedRef.current) {
           setCoachProfile(coach);
           const cm = await messagesService.getByClient(currentUser.id, coach.id);
-          if (mountedRef.current) setMessages(cm);
+          allMessages = cm;
         }
+      }
+      if (mountedRef.current) {
+        setMessages(allMessages);
+        // Contar mensajes no leídos dirigidos al usuario actual
+        const unread = allMessages.filter(m => m.receiverId === currentUser.id && !m.isRead).length;
+        setUnreadMessages(unread);
       }
     } catch (e: any) {
       console.error('Error loading messages:', e);
@@ -132,7 +138,11 @@ export default function App() {
   }, [currentUser, loadClients]);
 
   useEffect(() => {
-    if (currentUser && (clients.length > 0 || currentUser.role === 'client')) {
+    if (!currentUser) return;
+    if (currentUser.role === 'client') {
+      loadRoutines(currentUser.id);
+      loadMessages();
+    } else if (clients.length > 0) {
       loadRoutines();
       loadMessages();
     }
@@ -145,6 +155,15 @@ export default function App() {
       }).catch(console.error);
     }
   }, [currentUser]);
+
+  // Polling de mensajes cada 15 segundos para notificaciones en tiempo real
+  useEffect(() => {
+    if (!currentUser) return;
+    const interval = setInterval(() => {
+      loadMessages();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [currentUser, loadMessages]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -367,6 +386,7 @@ export default function App() {
             clients={clients}
             routines={routines}
             messages={messages}
+            unreadMessages={unreadMessages}
             onAddClient={handleAddClient}
             onUploadClientAvatar={handleUploadClientAvatar}
             onAddRoutineDay={handleAddRoutineDay}
@@ -385,6 +405,7 @@ export default function App() {
             routines={routines}
             logs={logs}
             messages={messages}
+            unreadMessages={unreadMessages}
             onAddLog={handleAddLog}
             onSendMessage={handleSendMessage}
             onUpdateClientStreak={async (id, streak) => {

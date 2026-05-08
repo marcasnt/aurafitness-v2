@@ -14,6 +14,7 @@ interface CoachDashboardProps {
   clients: User[];
   routines: RoutineDay[];
   messages: Message[];
+  unreadMessages?: number;
   onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }) => Promise<User | undefined>;
   onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => void;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
@@ -31,6 +32,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   clients,
   routines,
   messages,
+  unreadMessages = 0,
   onAddClient,
   onAddRoutineDay,
   onAddExercise,
@@ -270,8 +272,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
               className={`flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all relative ${activeTab === 'messages' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#a1a1aa] hover:text-white'}`}
             >
               <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Mensajes</span><span className="sm:hidden">M</span>
-              {messages.filter(m => !m.isRead && m.senderId !== coach.id).length > 0 && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ef4444] rounded-full animate-ping" />
+              {unreadMessages > 0 && (
+                <span className="absolute -top-1.5 -right-1 bg-[#ef4444] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]">
+                  {unreadMessages}
+                </span>
               )}
             </button>
           </div>
