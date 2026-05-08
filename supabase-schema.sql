@@ -27,6 +27,37 @@ ON CONFLICT (id) DO UPDATE SET
   allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 -- ============================================================
+-- STORAGE RLS POLICIES: Permitir todo en bucket avatars
+-- (La app usa auth custom, no Supabase Auth nativo)
+-- ============================================================
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- Allow anyone to select (read) avatars
+DROP POLICY IF EXISTS "Allow public read avatars" ON storage.objects;
+CREATE POLICY "Allow public read avatars"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'avatars');
+
+-- Allow anyone to insert (upload) avatars
+DROP POLICY IF EXISTS "Allow public insert avatars" ON storage.objects;
+CREATE POLICY "Allow public insert avatars"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'avatars');
+
+-- Allow anyone to update avatars
+DROP POLICY IF EXISTS "Allow public update avatars" ON storage.objects;
+CREATE POLICY "Allow public update avatars"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'avatars')
+  WITH CHECK (bucket_id = 'avatars');
+
+-- Allow anyone to delete avatars
+DROP POLICY IF EXISTS "Allow public delete avatars" ON storage.objects;
+CREATE POLICY "Allow public delete avatars"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'avatars');
+
+-- ============================================================
 -- TABLA: profiles
 -- ============================================================
 CREATE TABLE public.profiles (
@@ -217,7 +248,7 @@ INSERT INTO public.profiles (
   payment_status
 ) VALUES (
   '00000000-0000-0000-0000-000000000001',
-  'coach@aurafitness.com',
+  'marcasnt@gmail.com',
   'Marvin Martinez',
   '$2b$10$8znCgD7i/QoqwScp6KTM9exBUC1/ETq0PJAPItUzme0fFQG5RuNji',
   'coach',

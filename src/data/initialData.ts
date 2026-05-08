@@ -2,7 +2,7 @@ import { User, RoutineDay, WorkoutLog, Message } from '../types/fitness';
 
 export const COACH_USER: User = {
   id: '00000000-0000-0000-0000-000000000001',
-  email: 'coach@aurafitness.com',
+  email: 'marcasnt@gmail.com',
   name: 'Marvin Martinez',
   role: 'coach',
   avatar: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&q=80&w=200',

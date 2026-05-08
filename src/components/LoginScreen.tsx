@@ -21,7 +21,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     try {
       let user: User | null = null;
 
-      if (email.toLowerCase() === 'coach@aurafitness.com') {
+      if (email.toLowerCase() === 'marcasnt@gmail.com') {
         user = await authService.loginCoach(email, password);
       } else {
         user = await authService.loginClient(email, password);
@@ -79,7 +79,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="coach@aurafitness.com"
+                placeholder="marcasnt@gmail.com"
                 required
                 className="w-full bg-[#18181b] border border-[#27272a] rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#d4f826] focus:ring-1 focus:ring-[#d4f826] transition-all placeholder-[#52525b]"
               />
