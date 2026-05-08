@@ -431,14 +431,14 @@ export const messagesService = {
         .select('email, name')
         .eq('id', receiverId)
         .eq('role', 'coach')
-        .single();
+        .maybeSingle();
 
       if (coachProfile?.email) {
         const { data: senderProfile } = await supabase
           .from('profiles')
           .select('name')
           .eq('id', senderId)
-          .single();
+          .maybeSingle();
 
         notifyService.notifyCoachNewMessage(
           coachProfile.email,
@@ -475,28 +475,29 @@ export const messagesService = {
 export const notifyService = {
   async notifyCoachNewMessage(coachEmail: string, senderName: string, content: string): Promise<void> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+      // Usamos auth custom, por lo que supabase.auth.getSession() siempre es null.
+      // Usamos el anon key directamente para invocar la Edge Function.
+      const token = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-coach-email`;
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-coach-email`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            to: coachEmail,
-            subject: `Nuevo mensaje de ${senderName}`,
-            text: `Tienes un nuevo mensaje de ${senderName} en AURA Fitness Elite:\n\n${content}`,
-          }),
-        }
-      );
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: coachEmail,
+          subject: `Nuevo mensaje de ${senderName}`,
+          text: `Tienes un nuevo mensaje de ${senderName} en AURA Fitness Elite:\n\n${content}`,
+        }),
+      });
 
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         console.warn('Email notification failed:', err);
+      } else {
+        console.log('Email notification sent to coach');
       }
     } catch (e) {
       console.warn('Email notification error:', e);
