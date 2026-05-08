@@ -45,7 +45,9 @@ export default function App() {
   const loadRoutines = useCallback(async (clientId?: string) => {
     try {
       if (clientId) {
-        return await routinesService.getByClient(clientId);
+        const data = await routinesService.getByClient(clientId);
+        if (mountedRef.current) setRoutines(data);
+        return data;
       }
       if (currentUser?.role === 'coach') {
         const allRoutines: RoutineDay[] = [];
@@ -257,6 +259,19 @@ export default function App() {
     }
   };
 
+  const handleMarkMessagesRead = async (senderId: string) => {
+    if (!currentUser) return;
+    try {
+      await messagesService.markAsRead(currentUser.id, senderId);
+      if (mountedRef.current) {
+        setMessages(prev => prev.map(m => (m.senderId === senderId && m.receiverId === currentUser.id ? { ...m, isRead: true } : m)));
+        setUnreadMessages(prev => Math.max(0, prev - messages.filter(m => m.senderId === senderId && m.receiverId === currentUser.id && !m.isRead).length));
+      }
+    } catch (e: any) {
+      console.error('Error marking messages as read:', e);
+    }
+  };
+
   const handleAddLog = async (newLog: WorkoutLog) => {
     if (!currentUser) return;
     try {
@@ -396,6 +411,7 @@ export default function App() {
             onUpdateClientPayment={handleUpdateClientPayment}
             onMarkPaymentPaid={handleMarkPaymentPaid}
             onSendMessage={handleSendMessage}
+            onMarkMessagesRead={handleMarkMessagesRead}
             onLogout={handleLogout}
           />
         ) : (
@@ -408,6 +424,7 @@ export default function App() {
             unreadMessages={unreadMessages}
             onAddLog={handleAddLog}
             onSendMessage={handleSendMessage}
+            onMarkMessagesRead={handleMarkMessagesRead}
             onUpdateClientStreak={async (id, streak) => {
               try {
                 const updated = await clientsService.update(id, { streak });

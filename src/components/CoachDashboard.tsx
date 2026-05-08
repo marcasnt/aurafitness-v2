@@ -23,6 +23,7 @@ interface CoachDashboardProps {
   onUpdateClientPayment: (clientId: string, data: { nextPaymentDate: string; paymentStatus: 'paid' | 'pending' | 'overdue'; monthlyFee: number }) => void;
   onMarkPaymentPaid: (clientId: string) => void;
   onSendMessage: (receiverId: string, content: string) => void;
+  onMarkMessagesRead?: (senderId: string) => void;
   onUploadClientAvatar: (clientId: string, file: File) => void;
   onLogout: () => void;
 }
@@ -41,13 +42,21 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onUpdateClientPayment,
   onMarkPaymentPaid,
   onSendMessage,
+  onMarkMessagesRead,
   onUploadClientAvatar,
   onLogout
 }) => {
   const [activeTab, setActiveTab] = useState<'clients' | 'messages'>('clients');
-  const [selectedClientId, setSelectedClientId] = useState<string | null>(clients[0]?.id || null);
+  const [selectedClientId, setSelectedClientIdState] = useState<string | null>(clients[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [clientPasswords, setClientPasswords] = useState<Record<string, string>>({});
+
+  const setSelectedClientId = (id: string | null) => {
+    setSelectedClientIdState(id);
+    if (id && onMarkMessagesRead) {
+      onMarkMessagesRead(id);
+    }
+  };
   
   // Modals / Form States
   const [showAddClientModal, setShowAddClientModal] = useState(false);
