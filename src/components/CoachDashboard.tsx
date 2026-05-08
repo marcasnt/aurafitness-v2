@@ -313,32 +313,32 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
           <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
             <Users className="w-4 h-4 text-[#a1a1aa] mb-1" />
             <h3 className="text-xl font-bold text-white font-mono">{clients.length}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-widest">Total Atletas</p>
+            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Total Atletas</p>
           </div>
           <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
             <Users className="w-4 h-4 text-[#d4f826] mb-1" />
             <h3 className="text-xl font-bold text-[#d4f826] font-mono">{activeClients}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-widest">Activos (Racha+)</p>
+            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Activos (Racha+)</p>
           </div>
           <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
             <BarChart3 className="w-4 h-4 text-[#d4f826] mb-1" />
             <h3 className="text-xl font-bold text-[#d4f826] font-mono">{avgAdherence}%</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-widest">Adherencia</p>
+            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Adherencia</p>
           </div>
           <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
             <Calendar className="w-4 h-4 text-white mb-1" />
             <h3 className="text-xl font-bold text-white font-mono">{activeRoutines}/{totalRoutines}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-widest">Rutinas Act/Total</p>
+            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Rutinas Act/Total</p>
           </div>
           <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
             <Flame className="w-4 h-4 text-[#e5ba73] mb-1" />
             <h3 className="text-xl font-bold text-[#e5ba73] font-mono">{coach.streak}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-widest">Racha Coach</p>
+            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Racha Coach</p>
           </div>
           <div className={`bg-[#18181b] border rounded-xl p-3 flex flex-col items-center text-center ${overdueCount > 0 ? 'border-[#ef4444]/50' : 'border-[#27272a]'}`}>
             <span className="text-xs mb-1">{overdueCount > 0 ? '🚨' : '✅'}</span>
             <h3 className="text-xl font-bold font-mono">{totalRevenue}€</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-widest">Ingreso Mensual</p>
+            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Ingreso Mensual</p>
             {overdueCount > 0 && <span className="text-[8px] text-[#ef4444] font-mono font-bold">{overdueCount} Vencido{overdueCount>1?'s':''} · {pendingCount} Pendiente</span>}
           </div>
         </section>
@@ -353,7 +353,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
             {/* Left Column: Client List */}
-            <div className="w-full md:w-80 border-r border-[#1f1f23] bg-[#0e0e10] flex flex-col shrink-0">
+            <div className="w-full md:w-80 border-r border-[#1f1f23] bg-[#0e0e10] flex flex-col shrink-0 max-h-[50vh] md:max-h-none">
               <div className="p-4 border-b border-[#1f1f23] space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs uppercase tracking-wider font-bold text-white font-mono">Tus Asesorados</h4>
@@ -414,12 +414,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
             </div>
 
             {/* Right Column: Selected Athlete Workspace */}
-            <div className="flex-1 bg-[#121214] overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 bg-[#121214] overflow-y-auto p-4 md:p-6 space-y-6">
               {selectedClient ? (
                 <>
                   {/* Athlete Profile Banner */}
                   <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="absolute top-0 right-0 bg-gradient-to-l from-[#d4f826]/5 to-transparent w-48 h-full pointer-events-none" />
+                    <div className="absolute top-0 right-0 bg-gradient-to-l from-[#d4f826]/5 to-transparent w-48 h-full pointer-events-none hidden md:block" />
                     
                     {/* Input oculto para editar foto del cliente */}
                     <input
@@ -457,8 +457,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         <p className="text-xs text-[#a1a1aa] mt-1">
                           <strong className="text-white">Meta Élite:</strong> {selectedClient.goal}
                         </p>
-                        <p className="text-[11px] text-[#71717a] mt-0.5 flex items-center gap-1">
-                          <Phone className="w-3 h-3 text-[#52525b]" /> {selectedClient.phone || 'Sin Teléfono'} • {selectedClient.email}
+                        <p className="text-[11px] text-[#71717a] mt-0.5 flex items-center gap-1 flex-wrap break-all">
+                          <Phone className="w-3 h-3 text-[#52525b] shrink-0" /> {selectedClient.phone || 'Sin Teléfono'} • <span className="break-all">{selectedClient.email}</span>
                         </p>
                       </div>
                     </div>
@@ -510,7 +510,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                           </span>
                         </div>
                       </div>
-                      <div className="flex gap-1.5 pt-1">
+                      <div className="flex flex-wrap gap-1.5 pt-1">
                         <button
                           onClick={() => onMarkPaymentPaid(selectedClient.id)}
                           className="flex-1 bg-[#25d366] text-black font-bold text-[10px] py-1.5 rounded-lg hover:bg-[#20ba5a] transition-all font-mono"
@@ -627,7 +627,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     <div className="flex-1 p-3 flex flex-col justify-between">
                                       <div className="flex items-start justify-between gap-2">
                                         <div>
-                                          <h5 className="text-xs font-bold text-white">{ex.name}</h5>
+                                          <h5 className="text-xs font-bold text-white truncate">{ex.name}</h5>
                                           <div className="flex items-center gap-2 mt-1 flex-wrap">
                                             <span className="bg-[#27272a] text-[#a1a1aa] text-[9px] px-1.5 py-0.5 rounded">{ex.category}</span>
                                             <span className="text-[10px] text-white font-mono">{ex.sets} × {ex.reps}</span>
@@ -843,8 +843,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
         {/* TAB: MESSAGES */}
         {activeTab === 'messages' && (
-          <div className="flex-1 flex overflow-hidden bg-[#0e0e10]">
-            <div className="w-80 border-r border-[#1f1f23] flex flex-col shrink-0">
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#0e0e10]">
+            <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-[#1f1f23] flex flex-col shrink-0 max-h-[40vh] md:max-h-none">
               <div className="p-4 border-b border-[#1f1f23] text-xs font-mono font-bold tracking-wider text-white">
                 CONVERSACIONES
               </div>
@@ -887,7 +887,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       const isCoach = msg.senderId === coach.id;
                       return (
                         <div key={msg.id} className={`flex ${isCoach ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-md p-3 rounded-2xl text-xs ${isCoach ? 'bg-[#27272a] text-white rounded-tr-none border border-[#3f3f46]' : 'bg-[#18181b] text-[#f4f4f5] rounded-tl-none border border-[#27272a]'}`}>
+                          <div className={`max-w-[75vw] md:max-w-md p-3 rounded-2xl text-xs ${isCoach ? 'bg-[#27272a] text-white rounded-tr-none border border-[#3f3f46]' : 'bg-[#18181b] text-[#f4f4f5] rounded-tl-none border border-[#27272a]'}`}>
                             <p className="whitespace-pre-line">{msg.content}</p>
                             <span className="block text-[9px] text-[#71717a] mt-1 text-right font-mono">
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -930,7 +930,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       {/* MODAL: CREATE CLIENT WITH SELFIE */}
       {showAddClientModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-4 md:p-6 relative max-h-[90vh] overflow-y-auto">
             <h3 className="text-base font-bold font-mono tracking-wider text-white mb-1 uppercase text-[#d4f826]">
               Alta de Nuevo Atleta Premium
             </h3>
@@ -1043,7 +1043,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       {/* MODAL: CREATE ROUTINE DAY */}
       {showAddRoutineModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-6 relative">
+          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-4 md:p-6 relative">
             <h3 className="text-base font-bold font-mono tracking-wider text-white mb-1 uppercase text-[#d4f826]">
               Crear Nuevo Bloque de Día de Rutina
             </h3>

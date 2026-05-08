@@ -387,7 +387,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#09090b] text-[#f4f4f5] flex flex-col justify-between">
       {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#ef4444]/90 text-white text-xs px-4 py-2 rounded-xl font-mono animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#ef4444]/90 text-white text-xs px-4 py-2 rounded-xl font-mono animate-in fade-in slide-in-from-top-2 duration-300 max-w-[90vw] break-words">
           {error}
         </div>
       )}
