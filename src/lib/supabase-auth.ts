@@ -69,11 +69,15 @@ export const authService = {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('email', email.toLowerCase())
+      .ilike('email', email)
       .eq('role', 'client')
       .single();
 
-    if (error || !data) return null;
+    if (error) {
+      console.warn('loginClient error:', error.message, 'email queried:', email);
+      return null;
+    }
+    if (!data) return null;
 
     const match = await bcrypt.compare(password, data.password_hash);
     if (match) {
@@ -220,6 +224,15 @@ export const clientsService = {
       });
 
     if (payError) console.error('Error inserting payment record:', payError);
+  },
+
+  async resetPassword(id: string, newPassword: string): Promise<void> {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ password_hash: passwordHash })
+      .eq('id', id);
+    if (error) throw error;
   },
 };
 

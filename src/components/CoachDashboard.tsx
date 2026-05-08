@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { User, RoutineDay, Exercise, Message } from '../types/fitness';
 import { PRESET_EXERCISES } from '../data/initialData';
+import { clientsService } from '../lib/supabase-auth';
 
 interface CoachDashboardProps {
   coach: User;
@@ -197,9 +198,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   };
 
   // Copy WhatsApp Access Credentials Link
-  const copyWhatsAppCredentials = (client: User) => {
-    const password = clientPasswords[client.id] || 'mamcyj11jm';
-    const messageText = `¡Hola ${client.name}! 💪 Aquí tienes tus credenciales premium para ingresar a AURA Elite Coaching:\n\n🌐 Enlace: https://aura-fitness-elite.vercel.app\n📧 Usuario: ${client.email}\n🔑 Contraseña: ${password}\n\nIngresa hoy para completar y registrar tu plan de rutina asignada. ¡Vamos por la mejor versión! 🔥🏆`;
+  const copyWhatsAppCredentials = (client: User, customPassword?: string) => {
+    const password = customPassword || clientPasswords[client.id];
+    const passwordLine = password
+      ? `🔑 Contraseña: ${password}`
+      : `🔑 Contraseña: (Consulta con tu coach)`;
+    const messageText = `¡Hola ${client.name}! 💪 Aquí tienes tus credenciales premium para ingresar a AURA Elite Coaching:\n\n🌐 Enlace: https://aura-fitness-elite.vercel.app\n📧 Usuario: ${client.email}\n${passwordLine}\n\nIngresa hoy para completar y registrar tu plan de rutina asignada. ¡Vamos por la mejor versión! 🔥🏆`;
     
     navigator.clipboard.writeText(messageText);
     setCopiedClientId(client.id);
@@ -208,6 +212,18 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     const cleanPhone = client.phone?.replace(/[+ ]/g, '') || '';
     if (cleanPhone) {
       window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(messageText)}`, '_blank');
+    }
+  };
+
+  // Generate a new random password for a client
+  const handleResetPassword = async (client: User) => {
+    const newPassword = Math.random().toString(36).slice(2, 10);
+    try {
+      await clientsService.resetPassword(client.id, newPassword);
+      setClientPasswords(prev => ({ ...prev, [client.id]: newPassword }));
+      copyWhatsAppCredentials(client, newPassword);
+    } catch (e: any) {
+      alert('Error al regenerar contraseña: ' + (e.message || 'desconocido'));
     }
   };
 
@@ -451,6 +467,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         ) : (
                           <><Copy className="w-3.5 h-3.5" /> ENVIAR ACCESOS POR WA</>
                         )}
+                      </button>
+                      <button
+                        onClick={() => handleResetPassword(selectedClient)}
+                        className="w-full bg-[#27272a] text-[#d4f826] border border-[#3f3f46] font-bold text-[10px] py-1.5 px-3 rounded-lg hover:bg-[#3f3f46] transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Shield className="w-3 h-3" /> GENERAR NUEVA CONTRASEÑA
                       </button>
                     </div>
 
