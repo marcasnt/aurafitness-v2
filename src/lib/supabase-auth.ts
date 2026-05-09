@@ -332,6 +332,21 @@ export const exercisesService = {
     return data;
   },
 
+  async update(id: string, updates: Partial<FitnessExercise>): Promise<void> {
+    const updateData: Partial<Exercise> = {};
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.category !== undefined) updateData.category = updates.category;
+    if (updates.sets !== undefined) updateData.sets = updates.sets;
+    if (updates.reps !== undefined) updateData.reps = updates.reps;
+    if (updates.weight !== undefined) updateData.weight = updates.weight;
+    if (updates.restTime !== undefined) updateData.rest_time = updates.restTime;
+    if (updates.notes !== undefined) updateData.notes = updates.notes || null;
+    if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl || null;
+
+    const { error } = await supabase.from('exercises').update(updateData).eq('id', id);
+    if (error) throw error;
+  },
+
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from('exercises').delete().eq('id', id);
     if (error) throw error;

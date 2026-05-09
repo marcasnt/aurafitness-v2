@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Users, Calendar, MessageSquare, Plus, Search, Dumbbell, 
-  TrendingUp, MessageCircle, Copy, Check, Trash2, 
+  TrendingUp, MessageCircle, Copy, Check, Trash2, Pencil,
   Phone, Shield, BarChart3, Flame,
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard
 } from 'lucide-react';
@@ -17,6 +17,7 @@ interface CoachDashboardProps {
   onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }) => Promise<User | undefined>;
   onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => void;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
+  onUpdateExercise: (routineDayId: string, exerciseId: string, updates: Partial<Exercise>) => void;
   onDeleteExercise: (routineDayId: string, exerciseId: string) => void;
   onDeleteClient: (clientId: string) => void;
   onUpdateClientPayment: (clientId: string, data: { nextPaymentDate: string; paymentStatus: 'paid' | 'pending' | 'overdue'; monthlyFee: number }) => void;
@@ -36,6 +37,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onAddClient,
   onAddRoutineDay,
   onAddExercise,
+  onUpdateExercise,
   onDeleteExercise,
   onDeleteClient,
   onUpdateClientPayment,
@@ -95,6 +97,20 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   // Global exercise presets from Supabase
   const [globalPresets, setGlobalPresets] = useState<Exercise[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(false);
+
+  // Exercise Edit State
+  const [editingExercise, setEditingExercise] = useState<{
+    exercise: Exercise;
+    routineId: string;
+  } | null>(null);
+  const [editExerciseName, setEditExerciseName] = useState('');
+  const [editExerciseCategory, setEditExerciseCategory] = useState<Exercise['category']>('Chest');
+  const [editExerciseSets, setEditExerciseSets] = useState(4);
+  const [editExerciseReps, setEditExerciseReps] = useState('10-12');
+  const [editExerciseWeight, setEditExerciseWeight] = useState(20);
+  const [editExerciseRest, setEditExerciseRest] = useState(90);
+  const [editExerciseNotes, setEditExerciseNotes] = useState('');
+  const [editExerciseImageUrl, setEditExerciseImageUrl] = useState('');
 
   // Chat message active text
   const [chatInput, setChatInput] = useState('');
@@ -250,6 +266,39 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setExerciseImageUrl('');
     setExerciseImageFile(null);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
+  };
+
+  // Handle editing exercise
+  const openEditExerciseModal = (routineId: string, exercise: Exercise) => {
+    setEditingExercise({ exercise, routineId });
+    setEditExerciseName(exercise.name);
+    setEditExerciseCategory(exercise.category);
+    setEditExerciseSets(exercise.sets);
+    setEditExerciseReps(exercise.reps);
+    setEditExerciseWeight(exercise.weight);
+    setEditExerciseRest(exercise.restTime);
+    setEditExerciseNotes(exercise.notes || '');
+    setEditExerciseImageUrl(exercise.imageUrl || '');
+  };
+
+  const handleSaveExerciseEdit = () => {
+    if (!editingExercise) return;
+    const { exercise, routineId } = editingExercise;
+
+    const updates: Partial<Exercise> = {};
+    if (editExerciseName !== exercise.name) updates.name = editExerciseName;
+    if (editExerciseCategory !== exercise.category) updates.category = editExerciseCategory;
+    if (editExerciseSets !== exercise.sets) updates.sets = editExerciseSets;
+    if (editExerciseReps !== exercise.reps) updates.reps = editExerciseReps;
+    if (editExerciseWeight !== exercise.weight) updates.weight = editExerciseWeight;
+    if (editExerciseRest !== exercise.restTime) updates.restTime = editExerciseRest;
+    if (editExerciseNotes !== (exercise.notes || '')) updates.notes = editExerciseNotes;
+    if (editExerciseImageUrl !== (exercise.imageUrl || '')) updates.imageUrl = editExerciseImageUrl;
+
+    if (Object.keys(updates).length > 0) {
+      onUpdateExercise(routineId, exercise.id, updates);
+    }
+    setEditingExercise(null);
   };
 
   // Copy WhatsApp Access Credentials Link
@@ -679,12 +728,22 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                             <span className="text-[10px] text-[#a1a1aa] font-mono">⏱ {ex.restTime}s</span>
                                           </div>
                                         </div>
-                                        <button
-                                          onClick={() => onDeleteExercise(routine.id, ex.id)}
-                                          className="text-[#71717a] hover:text-[#ef4444] p-1 transition-all shrink-0"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            onClick={() => openEditExerciseModal(routine.id, ex)}
+                                            className="text-[#71717a] hover:text-[#d4f826] p-1 transition-all"
+                                            title="Editar ejercicio"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => onDeleteExercise(routine.id, ex.id)}
+                                            className="text-[#71717a] hover:text-[#ef4444] p-1 transition-all"
+                                            title="Eliminar ejercicio"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
                                       </div>
                                       {ex.notes && (
                                         <p className="text-[10px] text-[#e5ba73] italic mt-2">💡 {ex.notes}</p>
@@ -1172,6 +1231,101 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT EXERCISE */}
+      {editingExercise && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-4 md:p-6 relative max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-bold font-mono tracking-wider text-white mb-1 uppercase text-[#d4f826]">
+              Editar Ejercicio
+            </h3>
+            <p className="text-xs text-[#a1a1aa] mb-4">Modifica cualquier campo del ejercicio seleccionado.</p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Nombre del Ejercicio</label>
+                <input
+                  type="text"
+                  value={editExerciseName}
+                  onChange={(e) => setEditExerciseName(e.target.value)}
+                  className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Grupo Muscular</label>
+                <select
+                  value={editExerciseCategory}
+                  onChange={(e) => setEditExerciseCategory(e.target.value as Exercise['category'])}
+                  className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]"
+                >
+                  <option value="Chest">Pecho</option>
+                  <option value="Back">Espalda</option>
+                  <option value="Legs">Piernas</option>
+                  <option value="Shoulders">Hombros</option>
+                  <option value="Arms">Brazos</option>
+                  <option value="Core">Core</option>
+                  <option value="Cardio">Cardio</option>
+                  <option value="Traps">Trapecios</option>
+                  <option value="Glutes">Glúteos</option>
+                  <option value="Forearms">Antebrazos</option>
+                  <option value="Full Body">Cuerpo Completo</option>
+                  <option value="Home Workout">En Casa</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Series</label>
+                  <input type="number" value={editExerciseSets} onChange={(e) => setEditExerciseSets(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Rango Reps</label>
+                  <input type="text" value={editExerciseReps} onChange={(e) => setEditExerciseReps(e.target.value)} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Peso (kg)</label>
+                  <input type="number" value={editExerciseWeight} onChange={(e) => setEditExerciseWeight(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Descanso (s)</label>
+                  <input type="number" value={editExerciseRest} onChange={(e) => setEditExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Notas del Coach</label>
+                <input type="text" value={editExerciseNotes} onChange={(e) => setEditExerciseNotes(e.target.value)} placeholder="Ej: Mantener excéntrica lenta, RPE 9..." className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">URL de Imagen o GIF</label>
+                <input type="url" value={editExerciseImageUrl} onChange={(e) => setEditExerciseImageUrl(e.target.value)} placeholder="https://..." className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingExercise(null)}
+                  className="bg-transparent hover:bg-[#18181b] text-[#a1a1aa] text-xs font-semibold py-2 px-4 rounded-xl transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveExerciseEdit}
+                  className="bg-[#d4f826] text-black font-bold text-xs py-2 px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono"
+                >
+                  GUARDAR CAMBIOS
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

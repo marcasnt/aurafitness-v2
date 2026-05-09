@@ -233,6 +233,23 @@ export default function App() {
     }
   };
 
+  const handleUpdateExercise = async (routineDayId: string, exerciseId: string, updates: Partial<Exercise>) => {
+    try {
+      await exercisesService.update(exerciseId, updates);
+      const clientId = routines.find(r => r.id === routineDayId)?.clientId;
+      if (clientId) {
+        const updated = await routinesService.getByClient(clientId);
+        if (mountedRef.current) setRoutines(prev => prev.map(r => {
+          const found = updated.find(u => u.id === r.id);
+          return found ? found : r;
+        }));
+      }
+    } catch (e: any) {
+      console.error('Error updating exercise:', e);
+      showError('Error al actualizar ejercicio: ' + (e.message || 'desconocido'));
+    }
+  };
+
   const handleDeleteExercise = async (routineDayId: string, exerciseId: string) => {
     try {
       await exercisesService.delete(exerciseId);
@@ -406,6 +423,7 @@ export default function App() {
             onUploadClientAvatar={handleUploadClientAvatar}
             onAddRoutineDay={handleAddRoutineDay}
             onAddExercise={handleAddExercise}
+            onUpdateExercise={handleUpdateExercise}
             onDeleteExercise={handleDeleteExercise}
             onDeleteClient={handleDeleteClient}
             onUpdateClientPayment={handleUpdateClientPayment}
