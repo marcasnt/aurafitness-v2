@@ -83,6 +83,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [exerciseSets, setExerciseSets] = useState(4);
   const [exerciseReps, setExerciseReps] = useState('10-12');
   const [exerciseWeight, setExerciseWeight] = useState(20);
+  const [exerciseSetDetails, setExerciseSetDetails] = useState<{ reps: number; weight: number }[]>([
+    { reps: 15, weight: 15 },
+    { reps: 12, weight: 20 },
+    { reps: 10, weight: 25 },
+    { reps: 8, weight: 30 },
+  ]);
   const [exerciseRest, setExerciseRest] = useState(90);
   const [exerciseNotes, setExerciseNotes] = useState('');
   const [exerciseImageUrl, setExerciseImageUrl] = useState('');
@@ -113,6 +119,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [editExerciseImageUrl, setEditExerciseImageUrl] = useState('');
   const [editExerciseImageMode, setEditExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
   const [editExerciseImageFile, setEditExerciseImageFile] = useState<File | null>(null);
+  const [editExerciseSetDetails, setEditExerciseSetDetails] = useState<{ reps: number; weight: number }[]>([]);
 
   // Chat message active text
   const [chatInput, setChatInput] = useState('');
@@ -254,6 +261,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       sets: exerciseSets,
       reps: exerciseReps,
       weight: exerciseWeight,
+      setDetails: exerciseSetDetails,
       restTime: exerciseRest,
       notes: exerciseNotes,
       imageUrl: finalImageUrl || undefined
@@ -265,6 +273,13 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setCustomExerciseName('');
     setSelectedPreset('');
     setExerciseNotes('');
+    setExerciseSetDetails([
+      { reps: 15, weight: 15 },
+      { reps: 12, weight: 20 },
+      { reps: 10, weight: 25 },
+      { reps: 8, weight: 30 },
+    ]);
+    setExerciseSets(4);
     setExerciseImageUrl('');
     setExerciseImageFile(null);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
@@ -287,6 +302,16 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setEditExerciseSets(exercise.sets);
     setEditExerciseReps(exercise.reps);
     setEditExerciseWeight(exercise.weight);
+    if (exercise.setDetails && exercise.setDetails.length > 0) {
+      setEditExerciseSetDetails(exercise.setDetails);
+    } else {
+      setEditExerciseSetDetails(
+        Array.from({ length: exercise.sets }, () => ({
+          reps: parseInt(exercise.reps) || 10,
+          weight: exercise.weight,
+        }))
+      );
+    }
     setEditExerciseRest(exercise.restTime);
     setEditExerciseNotes(exercise.notes || '');
     setEditExerciseImageUrl(exercise.imageUrl || '');
@@ -318,6 +343,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     if (editExerciseRest !== exercise.restTime) updates.restTime = editExerciseRest;
     if (editExerciseNotes !== (exercise.notes || '')) updates.notes = editExerciseNotes;
     if (finalImageUrl !== (exercise.imageUrl || '')) updates.imageUrl = finalImageUrl;
+    const origSetDetails = JSON.stringify(exercise.setDetails || []);
+    const newSetDetails = JSON.stringify(editExerciseSetDetails);
+    if (newSetDetails !== origSetDetails) updates.setDetails = editExerciseSetDetails;
 
     if (Object.keys(updates).length > 0) {
       onUpdateExercise(routineId, exercise.id, updates);
@@ -325,6 +353,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setEditingExercise(null);
     setEditExerciseImageFile(null);
     setEditExerciseImageMode('url');
+    setEditExerciseSetDetails([]);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
@@ -815,6 +844,16 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                         setExerciseSets(preset.sets);
                                         setExerciseReps(preset.reps);
                                         setExerciseWeight(preset.weight);
+                                        if (preset.setDetails && preset.setDetails.length > 0) {
+                                          setExerciseSetDetails(preset.setDetails);
+                                        } else {
+                                          // Generar setDetails plano desde fallback
+                                          const arr = Array.from({ length: preset.sets }, () => ({
+                                            reps: parseInt(preset.reps) || 10,
+                                            weight: preset.weight,
+                                          }));
+                                          setExerciseSetDetails(arr);
+                                        }
                                         setExerciseRest(preset.restTime);
                                         setExerciseNotes(preset.notes || '');
                                         setExerciseImageUrl(preset.imageUrl || '');
@@ -867,22 +906,74 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div>
-                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Series</label>
-                                  <input type="number" value={exerciseSets} onChange={(e) => setExerciseSets(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white font-mono" />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Rango Reps</label>
-                                  <input type="text" value={exerciseReps} onChange={(e) => setExerciseReps(e.target.value)} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white font-mono" />
-                                </div>
-                                <div>
-                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Peso (kg)</label>
-                                  <input type="number" value={exerciseWeight} onChange={(e) => setExerciseWeight(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white font-mono" />
+                              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div className="md:col-span-3">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-[10px] text-[#a1a1aa]">Series Individuales (Reps · Peso)</label>
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (exerciseSetDetails.length > 1) {
+                                            const next = exerciseSetDetails.slice(0, -1);
+                                            setExerciseSetDetails(next);
+                                            setExerciseSets(next.length);
+                                          }
+                                        }}
+                                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#8e8e93] rounded-[4px] text-[10px] hover:text-white active:scale-95 transition-all"
+                                      >
+                                        −
+                                      </button>
+                                      <span className="text-[10px] text-white font-bold w-4 text-center">{exerciseSetDetails.length}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const last = exerciseSetDetails[exerciseSetDetails.length - 1] || { reps: 10, weight: 20 };
+                                          const next = [...exerciseSetDetails, { reps: last.reps, weight: last.weight }];
+                                          setExerciseSetDetails(next);
+                                          setExerciseSets(next.length);
+                                        }}
+                                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#d4f826] rounded-[4px] text-[10px] hover:bg-[#3f3f46] active:scale-95 transition-all"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    {exerciseSetDetails.map((s, i) => (
+                                      <div key={i} className="flex items-center gap-2">
+                                        <span className="text-[9px] text-[#8e8e93] w-5 text-right font-bold">{i + 1}</span>
+                                        <input
+                                          type="number"
+                                          placeholder="Reps"
+                                          value={s.reps}
+                                          onChange={(e) => {
+                                            const next = [...exerciseSetDetails];
+                                            next[i] = { ...next[i], reps: Number(e.target.value) };
+                                            setExerciseSetDetails(next);
+                                          }}
+                                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                                        />
+                                        <span className="text-[9px] text-[#8e8e93]">reps</span>
+                                        <input
+                                          type="number"
+                                          placeholder="Peso"
+                                          value={s.weight}
+                                          onChange={(e) => {
+                                            const next = [...exerciseSetDetails];
+                                            next[i] = { ...next[i], weight: Number(e.target.value) };
+                                            setExerciseSetDetails(next);
+                                          }}
+                                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                                        />
+                                        <span className="text-[9px] text-[#8e8e93]">kg</span>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="block text-[10px] text-[#a1a1aa] mb-1">Descanso (s)</label>
-                                  <input type="number" value={exerciseRest} onChange={(e) => setExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white font-mono" />
+                                  <input type="number" value={exerciseRest} onChange={(e) => setExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white" />
                                 </div>
                               </div>
 
@@ -1317,25 +1408,74 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Series</label>
-                  <input type="number" value={editExerciseSets} onChange={(e) => setEditExerciseSets(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="md:col-span-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[10px] text-[#a1a1aa]">Series Individuales (Reps · Peso)</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editExerciseSetDetails.length > 1) {
+                            const next = editExerciseSetDetails.slice(0, -1);
+                            setEditExerciseSetDetails(next);
+                            setEditExerciseSets(next.length);
+                          }
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#8e8e93] rounded-[4px] text-[10px] hover:text-white active:scale-95 transition-all"
+                      >
+                        −
+                      </button>
+                      <span className="text-[10px] text-white font-bold w-4 text-center">{editExerciseSetDetails.length}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const last = editExerciseSetDetails[editExerciseSetDetails.length - 1] || { reps: 10, weight: 20 };
+                          const next = [...editExerciseSetDetails, { reps: last.reps, weight: last.weight }];
+                          setEditExerciseSetDetails(next);
+                          setEditExerciseSets(next.length);
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#d4f826] rounded-[4px] text-[10px] hover:bg-[#3f3f46] active:scale-95 transition-all"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    {editExerciseSetDetails.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-[9px] text-[#8e8e93] w-5 text-right font-bold">{i + 1}</span>
+                        <input
+                          type="number"
+                          placeholder="Reps"
+                          value={s.reps}
+                          onChange={(e) => {
+                            const next = [...editExerciseSetDetails];
+                            next[i] = { ...next[i], reps: Number(e.target.value) };
+                            setEditExerciseSetDetails(next);
+                          }}
+                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                        />
+                        <span className="text-[9px] text-[#8e8e93]">reps</span>
+                        <input
+                          type="number"
+                          placeholder="Peso"
+                          value={s.weight}
+                          onChange={(e) => {
+                            const next = [...editExerciseSetDetails];
+                            next[i] = { ...next[i], weight: Number(e.target.value) };
+                            setEditExerciseSetDetails(next);
+                          }}
+                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                        />
+                        <span className="text-[9px] text-[#8e8e93]">kg</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Rango Reps</label>
-                  <input type="text" value={editExerciseReps} onChange={(e) => setEditExerciseReps(e.target.value)} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Peso (kg)</label>
-                  <input type="number" value={editExerciseWeight} onChange={(e) => setEditExerciseWeight(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Descanso (s)</label>
-                  <input type="number" value={editExerciseRest} onChange={(e) => setEditExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Descanso (s)</label>
+                  <input type="number" value={editExerciseRest} onChange={(e) => setEditExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
                 </div>
               </div>
 

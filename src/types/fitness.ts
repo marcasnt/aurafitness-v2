@@ -25,13 +25,19 @@ export interface User {
   paymentHistory?: PaymentEntry[];
 }
 
+export interface ExerciseSet {
+  reps: number;
+  weight: number;
+}
+
 export interface Exercise {
   id: string;
   name: string;
-  category: 'Chest' | 'Back' | 'Legs' | 'Shoulders' | 'Arms' | 'Core' | 'Cardio';
+  category: 'Chest' | 'Back' | 'Legs' | 'Shoulders' | 'Arms' | 'Core' | 'Cardio' | 'Traps' | 'Glutes' | 'Forearms' | 'Full Body' | 'Home Workout';
   sets: number;
-  reps: string; // e.g., "10-12" or "4x8" or "As many reps as possible"
-  weight: number; // in kg or lbs
+  reps: string; // fallback para ejercicios sin setDetails
+  weight: number; // fallback para ejercicios sin setDetails
+  setDetails?: ExerciseSet[]; // series individuales: rep y peso por serie
   restTime: number; // in seconds
   notes?: string;
   imageUrl?: string; // Imagen o GIF demostrativo del ejercicio
