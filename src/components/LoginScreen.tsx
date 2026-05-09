@@ -10,8 +10,6 @@ interface LoginScreenProps {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -93,22 +91,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               type="email"
               id="login-email"
               required
+              placeholder="Correo Electronico"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              onFocus={() => setEmailFocused(true)}
-              onBlur={() => setEmailFocused(false)}
-              className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200"
+              className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors duration-200"
             />
-            <label
-              htmlFor="login-email"
-              className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                emailFocused || email
-                  ? 'top-[5px] text-[11px] text-[#d4f826] bg-[#141416] px-1 -ml-0'
-                  : 'top-3.5 text-[16px] text-[#8e8e93]'
-              }`}
-            >
-              Correo Electronico
-            </label>
             <UserIcon className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46] pointer-events-none" />
           </div>
 
@@ -118,22 +105,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               type="password"
               id="login-password"
               required
+              placeholder="Contrasena"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => setPasswordFocused(true)}
-              onBlur={() => setPasswordFocused(false)}
-              className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200"
+              className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors duration-200"
             />
-            <label
-              htmlFor="login-password"
-              className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                passwordFocused || password
-                  ? 'top-[5px] text-[11px] text-[#d4f826] bg-[#141416] px-1 -ml-0'
-                  : 'top-3.5 text-[16px] text-[#8e8e93]'
-              }`}
-            >
-              Contrasena
-            </label>
             <Lock className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46] pointer-events-none" />
           </div>
 
