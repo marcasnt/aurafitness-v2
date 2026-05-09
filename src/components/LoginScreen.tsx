@@ -10,6 +10,8 @@ interface LoginScreenProps {
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -86,43 +88,53 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Email Input */}
-          <div className="relative group">
+          <div className="relative">
             <input
               type="email"
               id="login-email"
               required
-              placeholder=" "
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="peer w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200 placeholder-transparent"
+              onFocus={() => setEmailFocused(true)}
+              onBlur={() => setEmailFocused(false)}
+              className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200"
             />
             <label
               htmlFor="login-email"
-              className="absolute left-4 top-3.5 text-[#8e8e93] text-[16px] transition-all duration-200 pointer-events-none peer-focus:top-1.5 peer-focus:text-[11px] peer-focus:text-[#d4f826] peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:text-[#8e8e93] peer-[:not(:placeholder-shown)]:bg-[#141416] peer-[:not(:placeholder-shown)]:px-1 peer-[:not(:placeholder-shown)]:-ml-1"
+              className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                emailFocused || email
+                  ? 'top-[5px] text-[11px] text-[#d4f826] bg-[#141416] px-1 -ml-0'
+                  : 'top-3.5 text-[16px] text-[#8e8e93]'
+              }`}
             >
               Correo Electronico
             </label>
-            <UserIcon className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46]" />
+            <UserIcon className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46] pointer-events-none" />
           </div>
 
           {/* Password Input */}
-          <div className="relative group">
+          <div className="relative">
             <input
               type="password"
               id="login-password"
               required
-              placeholder=" "
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="peer w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200 placeholder-transparent"
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
+              className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200"
             />
             <label
               htmlFor="login-password"
-              className="absolute left-4 top-3.5 text-[#8e8e93] text-[16px] transition-all duration-200 pointer-events-none peer-focus:top-1.5 peer-focus:text-[11px] peer-focus:text-[#d4f826] peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:text-[#8e8e93] peer-[:not(:placeholder-shown)]:bg-[#141416] peer-[:not(:placeholder-shown)]:px-1 peer-[:not(:placeholder-shown)]:-ml-1"
+              className={`absolute left-4 transition-all duration-200 pointer-events-none ${
+                passwordFocused || password
+                  ? 'top-[5px] text-[11px] text-[#d4f826] bg-[#141416] px-1 -ml-0'
+                  : 'top-3.5 text-[16px] text-[#8e8e93]'
+              }`}
             >
               Contrasena
             </label>
-            <Lock className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46]" />
+            <Lock className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46] pointer-events-none" />
           </div>
 
           {/* Error */}
