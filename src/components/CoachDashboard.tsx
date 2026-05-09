@@ -944,26 +944,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                       <div key={i} className="flex items-center gap-2">
                                         <span className="text-[9px] text-[#8e8e93] w-5 text-right font-bold">{i + 1}</span>
                                         <input
-                                          type="number"
-                                          placeholder="Reps"
-                                          value={s.reps}
-                                          onChange={(e) => {
-                                            const next = [...exerciseSetDetails];
-                                            next[i] = { ...next[i], reps: Number(e.target.value) };
-                                            setExerciseSetDetails(next);
-                                          }}
+                                          type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Reps" value={s.reps || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...exerciseSetDetails]; next[i] = { ...next[i], reps: v === '' ? 0 : Number(v) }; setExerciseSetDetails(next); }}
                                           className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
                                         />
                                         <span className="text-[9px] text-[#8e8e93]">reps</span>
                                         <input
-                                          type="number"
-                                          placeholder="Peso"
-                                          value={s.weight}
-                                          onChange={(e) => {
-                                            const next = [...exerciseSetDetails];
-                                            next[i] = { ...next[i], weight: Number(e.target.value) };
-                                            setExerciseSetDetails(next);
-                                          }}
+                                          type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Peso" value={s.weight || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...exerciseSetDetails]; next[i] = { ...next[i], weight: v === '' ? 0 : Number(v) }; setExerciseSetDetails(next); }}
                                           className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
                                         />
                                         <span className="text-[9px] text-[#8e8e93]">kg</span>
@@ -973,7 +959,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                 </div>
                                 <div>
                                   <label className="block text-[10px] text-[#a1a1aa] mb-1">Descanso (s)</label>
-                                  <input type="number" value={exerciseRest} onChange={(e) => setExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white" />
+                                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={exerciseRest || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setExerciseRest(v === '' ? 0 : Number(v)); }} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white" />
                                 </div>
                               </div>
 
@@ -1314,7 +1300,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold flex items-center gap-1"><CreditCard className="w-3 h-3"/> Cuota Mensual (€)</label>
-                  <input type="number" min="0" value={newClientFee} onChange={(e) => setNewClientFee(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={newClientFee || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setNewClientFee(v === '' ? 0 : Number(v)); }} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
                 </div>
                 <div>
                   <label className="block text-[11px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Fecha 1er Pago</label>
@@ -1446,24 +1432,30 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       <div key={i} className="flex items-center gap-2">
                         <span className="text-[9px] text-[#8e8e93] w-5 text-right font-bold">{i + 1}</span>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           placeholder="Reps"
-                          value={s.reps}
+                          value={s.reps || ''}
                           onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9]/g, '');
                             const next = [...editExerciseSetDetails];
-                            next[i] = { ...next[i], reps: Number(e.target.value) };
+                            next[i] = { ...next[i], reps: v === '' ? 0 : Number(v) };
                             setEditExerciseSetDetails(next);
                           }}
                           className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
                         />
                         <span className="text-[9px] text-[#8e8e93]">reps</span>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
                           placeholder="Peso"
-                          value={s.weight}
+                          value={s.weight || ''}
                           onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9]/g, '');
                             const next = [...editExerciseSetDetails];
-                            next[i] = { ...next[i], weight: Number(e.target.value) };
+                            next[i] = { ...next[i], weight: v === '' ? 0 : Number(v) };
                             setEditExerciseSetDetails(next);
                           }}
                           className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
@@ -1475,7 +1467,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 </div>
                 <div>
                   <label className="block text-[10px] text-[#a1a1aa] mb-1">Descanso (s)</label>
-                  <input type="number" value={editExerciseRest} onChange={(e) => setEditExerciseRest(Number(e.target.value))} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={editExerciseRest || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setEditExerciseRest(v === '' ? 0 : Number(v)); }} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
                 </div>
               </div>
 
