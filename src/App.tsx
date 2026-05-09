@@ -392,19 +392,19 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#09090b] text-[#f4f4f5] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex items-center justify-center px-4">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-[#d4f826] border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-mono text-[#71717a]">Conectando con tu dashboard...</p>
+          <p className="text-sm text-[#8e8e93]">Conectando con tu dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#f4f4f5] flex flex-col justify-between">
+    <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex flex-col justify-between">
       {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#ef4444]/90 text-white text-xs px-4 py-2 rounded-xl font-mono animate-in fade-in slide-in-from-top-2 duration-300 max-w-[90vw] break-words">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#ff5449] text-white text-xs px-4 py-2 rounded-[12px] animate-in fade-in slide-in-from-top-2 duration-300 max-w-[90vw] break-words">
           {error}
         </div>
       )}

@@ -10,6 +10,12 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  /* Evitar zoom automático de iOS Safari en inputs con font-size < 16px */
+  @media (max-width: 768px) {
+    input, textarea, select {
+      font-size: 16px !important;
+    }
+  }
 }
 
 @keyframes fade-in-up {
