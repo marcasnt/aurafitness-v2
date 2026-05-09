@@ -6,7 +6,7 @@ import {
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard
 } from 'lucide-react';
 import { User, RoutineDay, Exercise, Message } from '../types/fitness';
-import { clientsService, exercisesService } from '../lib/supabase-auth';
+import { clientsService, exercisesService, storageService } from '../lib/supabase-auth';
 
 interface CoachDashboardProps {
   coach: User;
@@ -84,6 +84,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [exerciseRest, setExerciseRest] = useState(90);
   const [exerciseNotes, setExerciseNotes] = useState('');
   const [exerciseImageUrl, setExerciseImageUrl] = useState('');
+  const [exerciseImageFile, setExerciseImageFile] = useState<File | null>(null);
   const [exerciseImageMode, setExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
   const [catalogSearch, setCatalogSearch] = useState('');
   const exerciseImageInputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +152,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const handleExerciseImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setExerciseImageFile(file);
     const url = URL.createObjectURL(file);
     setExerciseImageUrl(url);
   };
@@ -212,9 +214,21 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   };
 
   // Handle adding exercise
-  const handleAddExerciseToRoutine = (routineDayId: string) => {
+  const handleAddExerciseToRoutine = async (routineDayId: string) => {
     const finalName = selectedPreset || customExerciseName;
     if (!finalName) return;
+
+    let finalImageUrl = exerciseImageUrl;
+
+    // Si hay un archivo local seleccionado, subirlo a Supabase Storage
+    if (exerciseImageMode === 'upload' && exerciseImageFile) {
+      try {
+        finalImageUrl = await storageService.uploadExerciseImage(routineDayId, exerciseImageFile);
+      } catch (err: any) {
+        alert('Error al subir imagen: ' + (err.message || 'desconocido'));
+        return;
+      }
+    }
 
     const newExercise = {
       name: finalName,
@@ -224,16 +238,18 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       weight: exerciseWeight,
       restTime: exerciseRest,
       notes: exerciseNotes,
-      imageUrl: exerciseImageUrl || undefined
+      imageUrl: finalImageUrl || undefined
     };
 
     onAddExercise(routineDayId, newExercise);
-    
+
     // Reset exercise input fields
     setCustomExerciseName('');
     setSelectedPreset('');
     setExerciseNotes('');
     setExerciseImageUrl('');
+    setExerciseImageFile(null);
+    if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
   // Copy WhatsApp Access Credentials Link
@@ -704,6 +720,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                         setExerciseNotes(preset.notes || '');
                                         setExerciseImageUrl(preset.imageUrl || '');
                                       }
+                                      setExerciseImageFile(null);
+                                      if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
                                     }}
                                     className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
                                   >
@@ -783,21 +801,21 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                   <div className="flex bg-[#121214] rounded-lg p-0.5 border border-[#27272a]">
                                     <button
                                       type="button"
-                                      onClick={() => setExerciseImageMode('url')}
+                                      onClick={() => { setExerciseImageMode('url'); setExerciseImageFile(null); setExerciseImageUrl(''); if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = ''; }}
                                       className={`text-[9px] px-2 py-1 rounded-md font-mono transition-all flex items-center gap-1 ${exerciseImageMode === 'url' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#71717a]'}`}
                                     >
                                       <LinkIcon className="w-3 h-3" /> URL
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => setExerciseImageMode('upload')}
+                                      onClick={() => { setExerciseImageMode('upload'); setExerciseImageFile(null); setExerciseImageUrl(''); if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = ''; }}
                                       className={`text-[9px] px-2 py-1 rounded-md font-mono transition-all flex items-center gap-1 ${exerciseImageMode === 'upload' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#71717a]'}`}
                                     >
                                       <Upload className="w-3 h-3" /> Archivo
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => setExerciseImageMode('catalog')}
+                                      onClick={() => { setExerciseImageMode('catalog'); setExerciseImageFile(null); setExerciseImageUrl(''); if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = ''; }}
                                       className={`text-[9px] px-2 py-1 rounded-md font-mono transition-all flex items-center gap-1 ${exerciseImageMode === 'catalog' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#71717a]'}`}
                                     >
                                       <Search className="w-3 h-3" /> Catálogo

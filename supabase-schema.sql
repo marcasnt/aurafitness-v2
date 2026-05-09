@@ -58,6 +58,52 @@ CREATE POLICY "Allow public delete avatars"
   USING (bucket_id = 'avatars');
 
 -- ============================================================
+-- STORAGE: BUCKET PARA IMAGENES DE EJERCICIOS
+-- ============================================================
+INSERT INTO storage.buckets (
+  id, name, public, file_size_limit, allowed_mime_types
+) VALUES (
+  'exercise-images',
+  'exercise-images',
+  true,
+  5242880,
+  ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = true,
+  file_size_limit = 5242880,
+  allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+-- ============================================================
+-- STORAGE RLS POLICIES: Permitir todo en bucket exercise-images
+-- ============================================================
+
+-- Allow anyone to select (read) exercise-images
+DROP POLICY IF EXISTS "Allow public read exercise-images" ON storage.objects;
+CREATE POLICY "Allow public read exercise-images"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'exercise-images');
+
+-- Allow anyone to insert (upload) exercise-images
+DROP POLICY IF EXISTS "Allow public insert exercise-images" ON storage.objects;
+CREATE POLICY "Allow public insert exercise-images"
+  ON storage.objects FOR INSERT
+  WITH CHECK (bucket_id = 'exercise-images');
+
+-- Allow anyone to update exercise-images
+DROP POLICY IF EXISTS "Allow public update exercise-images" ON storage.objects;
+CREATE POLICY "Allow public update exercise-images"
+  ON storage.objects FOR UPDATE
+  USING (bucket_id = 'exercise-images')
+  WITH CHECK (bucket_id = 'exercise-images');
+
+-- Allow anyone to delete exercise-images
+DROP POLICY IF EXISTS "Allow public delete exercise-images" ON storage.objects;
+CREATE POLICY "Allow public delete exercise-images"
+  ON storage.objects FOR DELETE
+  USING (bucket_id = 'exercise-images');
+
+-- ============================================================
 -- TABLA: profiles
 -- ============================================================
 CREATE TABLE public.profiles (
