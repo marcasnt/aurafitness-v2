@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Users, Calendar, MessageSquare, Plus, Search, Dumbbell, 
   TrendingUp, MessageCircle, Copy, Check, Trash2, 
@@ -6,8 +6,7 @@ import {
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard
 } from 'lucide-react';
 import { User, RoutineDay, Exercise, Message } from '../types/fitness';
-import { PRESET_EXERCISES } from '../data/initialData';
-import { clientsService } from '../lib/supabase-auth';
+import { clientsService, exercisesService } from '../lib/supabase-auth';
 
 interface CoachDashboardProps {
   coach: User;
@@ -85,14 +84,43 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [exerciseRest, setExerciseRest] = useState(90);
   const [exerciseNotes, setExerciseNotes] = useState('');
   const [exerciseImageUrl, setExerciseImageUrl] = useState('');
-  const [exerciseImageMode, setExerciseImageMode] = useState<'url' | 'upload'>('url');
+  const [exerciseImageMode, setExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
+  const [catalogSearch, setCatalogSearch] = useState('');
   const exerciseImageInputRef = useRef<HTMLInputElement>(null);
 
   // WhatsApp Message State
   const [copiedClientId, setCopiedClientId] = useState<string | null>(null);
 
+  // Global exercise presets from Supabase
+  const [globalPresets, setGlobalPresets] = useState<Exercise[]>([]);
+  const [presetsLoading, setPresetsLoading] = useState(false);
+
   // Chat message active text
   const [chatInput, setChatInput] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    setPresetsLoading(true);
+    exercisesService.getGlobalPresets()
+      .then(data => {
+        if (!mounted) return;
+        const mapped: Exercise[] = data.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category as Exercise['category'],
+          sets: p.sets,
+          reps: p.reps,
+          weight: p.weight,
+          restTime: p.rest_time,
+          notes: p.notes || undefined,
+          imageUrl: p.image_url || undefined,
+        }));
+        setGlobalPresets(mapped);
+      })
+      .catch(err => console.warn('Error cargando presets:', err))
+      .finally(() => { if (mounted) setPresetsLoading(false); });
+    return () => { mounted = false; };
+  }, []);
 
   // Filtered lists
   const filteredClients = clients.filter(client => 
@@ -663,14 +691,26 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                   <select
                                     value={selectedPreset}
                                     onChange={(e) => {
-                                      setSelectedPreset(e.target.value);
-                                      if (e.target.value) setCustomExerciseName('');
+                                      const name = e.target.value;
+                                      setSelectedPreset(name);
+                                      if (name) setCustomExerciseName('');
+                                      const preset = globalPresets.find(p => p.name === name);
+                                      if (preset) {
+                                        setExerciseCategory(preset.category);
+                                        setExerciseSets(preset.sets);
+                                        setExerciseReps(preset.reps);
+                                        setExerciseWeight(preset.weight);
+                                        setExerciseRest(preset.restTime);
+                                        setExerciseNotes(preset.notes || '');
+                                        setExerciseImageUrl(preset.imageUrl || '');
+                                      }
                                     }}
                                     className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
                                   >
                                     <option value="">-- Elige Movimiento --</option>
-                                    {PRESET_EXERCISES.map((p, idx) => (
-                                      <option key={idx} value={p.name}>{p.name} ({p.category})</option>
+                                    {presetsLoading && <option value="" disabled>Cargando catálogo...</option>}
+                                    {globalPresets.map((p) => (
+                                      <option key={p.id} value={p.name}>{p.name} ({p.category})</option>
                                     ))}
                                   </select>
                                 </div>
@@ -701,6 +741,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     <option value="Arms">Brazos</option>
                                     <option value="Core">Core</option>
                                     <option value="Cardio">Cardio</option>
+                                    <option value="Traps">Trapecios</option>
+                                    <option value="Glutes">Glúteos</option>
+                                    <option value="Forearms">Antebrazos</option>
+                                    <option value="Full Body">Cuerpo Completo</option>
+                                    <option value="Home Workout">En Casa</option>
                                   </select>
                                 </div>
                               </div>
@@ -729,7 +774,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                 <input type="text" placeholder="Ej: Mantener excéntrica lenta, RPE 9..." value={exerciseNotes} onChange={(e) => setExerciseNotes(e.target.value)} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white" />
                               </div>
 
-                              {/* IMAGE/GIF UPLOAD SECTION FOR EXERCISE */}
+                              {/* IMAGE/GIF HYBRID SELECTOR */}
                               <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <label className="text-[10px] font-mono uppercase tracking-wider text-white font-semibold flex items-center gap-1.5">
@@ -750,10 +795,17 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     >
                                       <Upload className="w-3 h-3" /> Archivo
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setExerciseImageMode('catalog')}
+                                      className={`text-[9px] px-2 py-1 rounded-md font-mono transition-all flex items-center gap-1 ${exerciseImageMode === 'catalog' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#71717a]'}`}
+                                    >
+                                      <Search className="w-3 h-3" /> Catálogo
+                                    </button>
                                   </div>
                                 </div>
 
-                                {exerciseImageMode === 'url' ? (
+                                {exerciseImageMode === 'url' && (
                                   <input
                                     type="url"
                                     placeholder="https://... (URL de imagen o GIF animado)"
@@ -761,7 +813,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     onChange={(e) => setExerciseImageUrl(e.target.value)}
                                     className="w-full bg-[#121214] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
                                   />
-                                ) : (
+                                )}
+
+                                {exerciseImageMode === 'upload' && (
                                   <div>
                                     <input
                                       ref={exerciseImageInputRef}
@@ -777,6 +831,39 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     >
                                       <Upload className="w-4 h-4" /> Subir Imagen o GIF desde tu dispositivo
                                     </button>
+                                  </div>
+                                )}
+
+                                {exerciseImageMode === 'catalog' && (
+                                  <div className="space-y-2">
+                                    <input
+                                      type="text"
+                                      placeholder="Buscar en catálogo..."
+                                      value={catalogSearch}
+                                      onChange={(e) => setCatalogSearch(e.target.value)}
+                                      className="w-full bg-[#121214] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                                    />
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+                                      {globalPresets
+                                        .filter(p => p.imageUrl && p.name.toLowerCase().includes(catalogSearch.toLowerCase()))
+                                        .map(p => (
+                                          <button
+                                            key={p.id}
+                                            type="button"
+                                            onClick={() => { setExerciseImageUrl(p.imageUrl || ''); setExerciseImageMode('url'); }}
+                                            className="relative rounded-lg overflow-hidden border border-[#27272a] hover:border-[#d4f826] transition-all group"
+                                            title={p.name}
+                                          >
+                                            <img src={p.imageUrl} alt={p.name} className="w-full h-16 object-cover" />
+                                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                                              <span className="text-[8px] text-[#d4f826] font-mono text-center px-1">{p.name}</span>
+                                            </div>
+                                          </button>
+                                        ))}
+                                      {globalPresets.filter(p => p.imageUrl).length === 0 && (
+                                        <p className="col-span-full text-[10px] text-[#71717a] text-center py-2">El catálogo aún no tiene GIFs. Pega una URL o sube tu propia imagen.</p>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
 

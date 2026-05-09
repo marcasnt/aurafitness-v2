@@ -336,6 +336,17 @@ export const exercisesService = {
     const { error } = await supabase.from('exercises').delete().eq('id', id);
     if (error) throw error;
   },
+
+  async getGlobalPresets(): Promise<Exercise[]> {
+    const { data, error } = await supabase
+      .from('exercises')
+      .select('*')
+      .is('routine_id', null)
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  },
 };
 
 export const logsService = {
@@ -525,12 +536,12 @@ export const storageService = {
     const path = `exercises/${routineId}-${Date.now()}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
+      .from('exercise-images')
       .upload(path, file, { upsert: true, contentType: file.type });
 
     if (uploadError) throw uploadError;
 
-    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    const { data } = supabase.storage.from('exercise-images').getPublicUrl(path);
     return data.publicUrl;
   },
 };

@@ -1,0 +1,7 @@
+{
+  "name": "aura-scripts",
+  "type": "module",
+  "scripts": {
+    "seed-gifs": "npx tsx seed-exercise-gifs.ts"
+  }
+}
