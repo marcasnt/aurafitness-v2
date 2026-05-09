@@ -344,54 +344,71 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
   return (
-    <div className="min-h-screen bg-[#0b0b0c] text-[#f4f4f5] flex flex-col font-sans selection:bg-[#d4f826] selection:text-black">
-      
-      {/* Premium Header */}
-      <header className="border-b border-[#1f1f23] bg-[#121214] px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between sticky top-0 z-40 backdrop-blur-md bg-opacity-95 gap-2 sm:gap-0">
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <div className="bg-gradient-to-br from-[#1e1e24] to-[#2b2b35] p-1.5 sm:p-2 rounded-xl border border-[#27272a] text-[#d4f826]">
-            <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
+    <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex flex-col selection:bg-[#d4f826] selection:text-black">
+
+      {/* Material App Bar */}
+      <header className="bg-[#141416] border-b border-[#27272a] px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#1c1c1f] rounded-[12px] flex items-center justify-center border border-[#27272a]">
+            <Shield className="w-5 h-5 text-[#d4f826]" />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-white font-mono tracking-wider font-bold text-sm sm:text-lg truncate">AURA EXPERT HUB</span>
-              <span className="bg-[#d4f826]/10 text-[#d4f826] text-[9px] sm:text-[10px] font-mono font-bold px-1.5 sm:px-2 py-0.5 rounded-full border border-[#d4f826]/20 shrink-0">COACH PRO</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-white font-bold text-sm sm:text-base tracking-wide">AURA EXPERT HUB</span>
+              <span className="bg-[#d4f826]/10 text-[#d4f826] text-[9px] font-bold px-2 py-0.5 rounded-full border border-[#d4f826]/20">COACH PRO</span>
             </div>
-            <p className="text-[10px] sm:text-xs text-[#a1a1aa] truncate">{coach.email}</p>
+            <p className="text-[10px] text-[#8e8e93]">{coach.email}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-end">
-          <div className="flex bg-[#18181b] p-1 rounded-xl border border-[#27272a]">
-            <button 
+        <div className="flex items-center gap-3">
+          {/* Material Tabs */}
+          <div className="flex bg-[#0a0a0c] p-1 rounded-[8px]">
+            <button
               onClick={() => setActiveTab('clients')}
-              className={`flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all ${activeTab === 'clients' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#a1a1aa] hover:text-white'}`}
+              className={`relative flex items-center gap-1.5 text-[11px] font-medium px-3 py-2 rounded-[6px] transition-all ${
+                activeTab === 'clients'
+                  ? 'text-[#d4f826]'
+                  : 'text-[#8e8e93] hover:text-white'
+              }`}
             >
-              <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Atletas</span><span className="sm:hidden">A</span>
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Atletas</span>
+              {activeTab === 'clients' && (
+                <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#d4f826] rounded-full" />
+              )}
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('messages')}
-              className={`flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-medium px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg transition-all relative ${activeTab === 'messages' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#a1a1aa] hover:text-white'}`}
+              className={`relative flex items-center gap-1.5 text-[11px] font-medium px-3 py-2 rounded-[6px] transition-all ${
+                activeTab === 'messages'
+                  ? 'text-[#d4f826]'
+                  : 'text-[#8e8e93] hover:text-white'
+              }`}
             >
-              <MessageSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Mensajes</span><span className="sm:hidden">M</span>
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Mensajes</span>
               {unreadMessages > 0 && (
-                <span className="absolute -top-1.5 -right-1 bg-[#ef4444] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px]">
+                <span className="absolute -top-0.5 -right-0.5 bg-[#ff5449] text-white text-[8px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
                   {unreadMessages}
                 </span>
+              )}
+              {activeTab === 'messages' && (
+                <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#d4f826] rounded-full" />
               )}
             </button>
           </div>
 
-          <button 
+          <button
             onClick={onLogout}
-            className="text-[10px] sm:text-xs bg-[#1f1f23] hover:bg-[#ef4444]/10 hover:text-[#ef4444] text-[#a1a1aa] px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-[#27272a] transition-all font-mono"
+            className="text-[11px] text-[#8e8e93] hover:text-[#ff5449] px-3 py-2 rounded-[8px] hover:bg-[#ff5449]/10 transition-all"
           >
-            SALIR
+            Salir
           </button>
         </div>
       </header>
 
-      {/* Hero Stats - Dynamic Calculations */}
+      {/* Hero Stats - Material Surface Cards */}
       {(() => {
         const activeClients = clients.filter(c => c.streak > 0).length;
         const avgAdherence = clients.length > 0 ? Math.round(clients.reduce((s, c) => s + c.adherenceRate, 0) / clients.length) : 0;
@@ -402,37 +419,37 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         const totalRevenue = clients.reduce((s, c) => s + (c.monthlyFee || 0), 0);
 
         return (
-        <section className="bg-[#121214] border-b border-[#1f1f23] px-3 sm:px-6 py-4 sm:py-6 grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-3">
-          <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
-            <Users className="w-4 h-4 text-[#a1a1aa] mb-1" />
-            <h3 className="text-xl font-bold text-white font-mono">{clients.length}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Total Atletas</p>
+        <section className="bg-[#0a0a0c] border-b border-[#27272a] px-4 sm:px-6 py-4 sm:py-5 grid grid-cols-2 md:grid-cols-6 gap-3">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-4 flex flex-col items-center text-center">
+            <Users className="w-4 h-4 text-[#8e8e93] mb-2" />
+            <h3 className="text-2xl font-bold text-white">{clients.length}</h3>
+            <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider mt-1">Total Atletas</p>
           </div>
-          <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
-            <Users className="w-4 h-4 text-[#d4f826] mb-1" />
-            <h3 className="text-xl font-bold text-[#d4f826] font-mono">{activeClients}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Activos (Racha+)</p>
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-4 flex flex-col items-center text-center">
+            <Users className="w-4 h-4 text-[#d4f826] mb-2" />
+            <h3 className="text-2xl font-bold text-[#d4f826]">{activeClients}</h3>
+            <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider mt-1">Activos</p>
           </div>
-          <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
-            <BarChart3 className="w-4 h-4 text-[#d4f826] mb-1" />
-            <h3 className="text-xl font-bold text-[#d4f826] font-mono">{avgAdherence}%</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Adherencia</p>
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-4 flex flex-col items-center text-center">
+            <BarChart3 className="w-4 h-4 text-[#d4f826] mb-2" />
+            <h3 className="text-2xl font-bold text-[#d4f826]">{avgAdherence}%</h3>
+            <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider mt-1">Adherencia</p>
           </div>
-          <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
-            <Calendar className="w-4 h-4 text-white mb-1" />
-            <h3 className="text-xl font-bold text-white font-mono">{activeRoutines}/{totalRoutines}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Rutinas Act/Total</p>
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-4 flex flex-col items-center text-center">
+            <Calendar className="w-4 h-4 text-white mb-2" />
+            <h3 className="text-2xl font-bold text-white">{activeRoutines}/{totalRoutines}</h3>
+            <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider mt-1">Rutinas</p>
           </div>
-          <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex flex-col items-center text-center">
-            <Flame className="w-4 h-4 text-[#e5ba73] mb-1" />
-            <h3 className="text-xl font-bold text-[#e5ba73] font-mono">{coach.streak}</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Racha Coach</p>
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-4 flex flex-col items-center text-center">
+            <Flame className="w-4 h-4 text-[#e5ba73] mb-2" />
+            <h3 className="text-2xl font-bold text-[#e5ba73]">{coach.streak}</h3>
+            <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider mt-1">Racha Coach</p>
           </div>
-          <div className={`bg-[#18181b] border rounded-xl p-3 flex flex-col items-center text-center ${overdueCount > 0 ? 'border-[#ef4444]/50' : 'border-[#27272a]'}`}>
-            <span className="text-xs mb-1">{overdueCount > 0 ? '🚨' : '✅'}</span>
-            <h3 className="text-xl font-bold font-mono">{totalRevenue}€</h3>
-            <p className="text-[9px] text-[#71717a] uppercase tracking-wide">Ingreso Mensual</p>
-            {overdueCount > 0 && <span className="text-[8px] text-[#ef4444] font-mono font-bold">{overdueCount} Vencido{overdueCount>1?'s':''} · {pendingCount} Pendiente</span>}
+          <div className={`bg-[#141416] border rounded-[16px] p-4 flex flex-col items-center text-center ${overdueCount > 0 ? 'border-[#ff5449]/30' : 'border-[#27272a]'}`}>
+            <CreditCard className={`w-4 h-4 mb-2 ${overdueCount > 0 ? 'text-[#ff5449]' : 'text-[#8e8e93]'}`} />
+            <h3 className="text-2xl font-bold text-white">{totalRevenue}€</h3>
+            <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider mt-1">Ingreso Mensual</p>
+            {overdueCount > 0 && <span className="text-[9px] text-[#ff5449] mt-1">{overdueCount} Vencido{overdueCount>1?'s':''} · {pendingCount} Pendiente</span>}
           </div>
         </section>
         );
@@ -446,53 +463,54 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             
             {/* Left Column: Client List */}
-            <div className="w-full md:w-80 border-r border-[#1f1f23] bg-[#0e0e10] flex flex-col shrink-0 max-h-[50vh] md:max-h-none">
-              <div className="p-4 border-b border-[#1f1f23] space-y-3">
+            <div className="w-full md:w-80 border-r border-[#27272a] bg-[#0a0a0c] flex flex-col shrink-0 max-h-[50vh] md:max-h-none">
+              <div className="p-4 border-b border-[#27272a] space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs uppercase tracking-wider font-bold text-white font-mono">Tus Asesorados</h4>
-                  <button 
+                  <h4 className="text-[11px] uppercase tracking-wider font-bold text-white">Tus Asesorados</h4>
+                  <button
                     onClick={() => setShowAddClientModal(true)}
-                    className="bg-[#d4f826] text-black text-xs font-bold p-1.5 rounded-lg hover:bg-[#e2fa52] transition-all flex items-center gap-1 shadow-md"
+                    className="bg-[#d4f826] text-black text-[11px] font-semibold px-3 py-1.5 rounded-[28px] hover:bg-[#e2fa52] active:scale-[0.98] transition-all flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" /> Nuevo
                   </button>
                 </div>
                 <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-[#52525b] absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input 
-                    type="text" 
+                  <Search className="w-4 h-4 text-[#3f3f46] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
                     placeholder="Buscar por nombre o correo..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs pl-8 pr-3 py-2 text-white placeholder-[#52525b] focus:outline-none focus:border-[#d4f826] transition-all"
+                    className="w-full bg-[#141416] border border-[#27272a] rounded-[8px] text-xs pl-9 pr-3 py-2.5 text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors"
                   />
                 </div>
               </div>
 
               {/* Athletes Scroll Feed */}
-              <div className="flex-1 overflow-y-auto divide-y divide-[#1f1f23]">
+              <div className="flex-1 overflow-y-auto">
                 {filteredClients.map((client) => {
                   const isActive = client.id === selectedClientId;
-                  const payBadge = client.paymentStatus === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : client.paymentStatus === 'overdue' ? 'bg-[#ef4444]/10 text-[#ef4444]' : 'bg-[#e5ba73]/10 text-[#e5ba73]';
-                  const payLabel = client.paymentStatus === 'paid' ? '✓ PAGADO' : client.paymentStatus === 'overdue' ? '⚠ VENCIDO' : '◷ PENDIENTE';
+                  const payBadge = client.paymentStatus === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : client.paymentStatus === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]';
+                  const payLabel = client.paymentStatus === 'paid' ? 'PAGADO' : client.paymentStatus === 'overdue' ? 'VENCIDO' : 'PENDIENTE';
                   return (
-                    <div key={client.id} className={`p-3 transition-all flex items-center justify-between group ${isActive ? 'bg-[#18181b] border-l-4 border-[#d4f826]' : 'hover:bg-[#121214]'}`}>
+                    <div key={client.id} className={`p-3 transition-colors flex items-center justify-between group border-b border-[#27272a] ${isActive ? 'bg-[#1c1c1f]' : 'hover:bg-[#141416]'}`}>
                       <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedClientId(client.id)}>
                         <div className="relative shrink-0">
                           <img src={client.selfieUrl || client.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=100'} alt={client.name} className="w-10 h-10 rounded-full object-cover border-2 border-[#27272a]" />
+                          {isActive && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#d4f826] rounded-full border-2 border-[#0a0a0c]" />}
                         </div>
                         <div className="min-w-0">
-                          <h5 className="text-xs font-bold text-white tracking-wide truncate">{client.name}</h5>
+                          <h5 className="text-xs font-bold text-white truncate">{client.name}</h5>
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${payBadge}`}>{payLabel}</span>
-                            {client.streak > 0 && <span className="text-[9px] text-[#e5ba73] font-mono">🔥 {client.streak}d</span>}
-                            <span className="text-[9px] text-[#71717a] font-mono">€{client.monthlyFee}/mes</span>
+                            <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-[4px] ${payBadge}`}>{payLabel}</span>
+                            {client.streak > 0 && <span className="text-[9px] text-[#e5ba73]">{client.streak}d</span>}
+                            <span className="text-[9px] text-[#8e8e93]">€{client.monthlyFee}/mes</span>
                           </div>
                         </div>
                       </div>
                       <button
-                        onClick={(e) => { e.stopPropagation(); if(window.confirm(`⚠️ Eliminar a ${client.name}? Se borrarán rutinas, logs y mensajes.`)) onDeleteClient(client.id); }}
-                        className="text-[#52525b] hover:text-[#ef4444] p-1.5 rounded-lg hover:bg-[#ef4444]/10 transition-all opacity-0 group-hover:opacity-100 shrink-0"
+                        onClick={(e) => { e.stopPropagation(); if(window.confirm(`Eliminar a ${client.name}? Se borraran rutinas, logs y mensajes.`)) onDeleteClient(client.id); }}
+                        className="text-[#3f3f46] hover:text-[#ff5449] p-1.5 rounded-[8px] hover:bg-[#ff5449]/10 transition-all opacity-0 group-hover:opacity-100 shrink-0"
                         title="Eliminar atleta"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -501,19 +519,17 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                   );
                 })}
                 {filteredClients.length === 0 && (
-                  <div className="p-8 text-center text-xs text-[#52525b]">Ningún atleta coincide.</div>
+                  <div className="p-8 text-center text-xs text-[#52525b]">Ningun atleta coincide.</div>
                 )}
               </div>
             </div>
 
             {/* Right Column: Selected Athlete Workspace */}
-            <div className="flex-1 bg-[#121214] overflow-y-auto p-4 md:p-6 space-y-6">
+            <div className="flex-1 bg-[#0a0a0c] overflow-y-auto p-4 md:p-6 space-y-6">
               {selectedClient ? (
                 <>
                   {/* Athlete Profile Banner */}
-                  <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-                    <div className="absolute top-0 right-0 bg-gradient-to-l from-[#d4f826]/5 to-transparent w-48 h-full pointer-events-none hidden md:block" />
-                    
+                  <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-5 flex flex-col md:flex-row md:items-center justify-between gap-5">
                     {/* Input oculto para editar foto del cliente */}
                     <input
                       ref={editAvatarInputRef}
@@ -525,94 +541,90 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
                     <div className="flex items-center gap-4">
                       <div className="relative group cursor-pointer" onClick={() => editAvatarInputRef.current?.click()} title="Cambiar foto del cliente">
-                        <img 
-                          src={selectedClient.selfieUrl || selectedClient.avatar} 
-                          alt={selectedClient.name} 
-                          className="w-16 h-16 rounded-full object-cover border-2 border-[#d4f826] transition-all group-hover:border-[#e2fa52]"
+                        <img
+                          src={selectedClient.selfieUrl || selectedClient.avatar}
+                          alt={selectedClient.name}
+                          className="w-14 h-14 rounded-full object-cover border-2 border-[#d4f826]"
                         />
-                        {/* Overlay de edición al hover */}
                         <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
                           <Camera className="w-4 h-4 text-[#d4f826]" />
-                          <span className="text-[8px] text-white font-mono mt-0.5">CAMBIAR</span>
+                          <span className="text-[8px] text-white mt-0.5">CAMBIAR</span>
                         </div>
-                        {/* Badge permanente */}
-                        <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1 shadow-md">
+                        <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1">
                           <Camera className="w-3 h-3 text-black" />
                         </div>
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h2 className="text-xl font-bold text-white font-mono tracking-wide">{selectedClient.name}</h2>
-                          <span className="text-[10px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 font-mono px-2 py-0.5 rounded-full">
+                          <h2 className="text-lg font-bold text-white">{selectedClient.name}</h2>
+                          <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-2 py-0.5 rounded-full">
                             Plan Activo
                           </span>
                         </div>
-                        <p className="text-xs text-[#a1a1aa] mt-1">
-                          <strong className="text-white">Meta Élite:</strong> {selectedClient.goal}
+                        <p className="text-xs text-[#8e8e93] mt-1">
+                          <span className="text-white">Meta:</span> {selectedClient.goal}
                         </p>
-                        <p className="text-[11px] text-[#71717a] mt-0.5 flex items-center gap-1 flex-wrap break-all">
-                          <Phone className="w-3 h-3 text-[#52525b] shrink-0" /> {selectedClient.phone || 'Sin Teléfono'} • <span className="break-all">{selectedClient.email}</span>
+                        <p className="text-[11px] text-[#8e8e93] mt-0.5 flex items-center gap-1 flex-wrap break-all">
+                          <Phone className="w-3 h-3 text-[#3f3f46] shrink-0" /> {selectedClient.phone || 'Sin Telefono'} · <span className="break-all">{selectedClient.email}</span>
                         </p>
                       </div>
                     </div>
 
-                    {/* WhatsApp Sender */}
-                    <div className="bg-[#1f1f23] border border-[#27272a] rounded-xl p-3 shrink-0 flex flex-col space-y-2">
-                      <div className="text-[10px] uppercase tracking-wider text-[#a1a1aa] font-mono font-bold flex items-center gap-1.5">
-                        <MessageCircle className="w-3.5 h-3.5 text-[#25d366]" /> ACCESO POR WHATSAPP
-                      </div>
-                      <p className="text-[11px] text-[#a1a1aa] max-w-xs">
-                        Envía sus claves pre-generadas para que use su vista de cliente.
-                      </p>
-                      <button
-                        onClick={() => copyWhatsAppCredentials(selectedClient)}
-                        className="w-full bg-[#25d366] text-black font-bold text-xs py-2 px-3 rounded-lg hover:bg-[#20ba5a] transition-all flex items-center justify-center gap-1.5"
-                      >
-                        {copiedClientId === selectedClient.id ? (
-                          <><Check className="w-3.5 h-3.5" /> ¡COPIADO & ENVIANDO!</>
-                        ) : (
-                          <><Copy className="w-3.5 h-3.5" /> ENVIAR ACCESOS POR WA</>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleResetPassword(selectedClient)}
-                        className="w-full bg-[#27272a] text-[#d4f826] border border-[#3f3f46] font-bold text-[10px] py-1.5 px-3 rounded-lg hover:bg-[#3f3f46] transition-all flex items-center justify-center gap-1.5"
-                      >
-                        <Shield className="w-3 h-3" /> GENERAR NUEVA CONTRASEÑA
-                      </button>
-                    </div>
-
-                    {/* Payment Management Widget */}
-                    <div className={`border rounded-xl p-3 shrink-0 flex flex-col space-y-2 ${selectedClient.paymentStatus === 'overdue' ? 'bg-[#ef4444]/5 border-[#ef4444]/30' : selectedClient.paymentStatus === 'pending' ? 'bg-[#e5ba73]/5 border-[#e5ba73]/30' : 'bg-[#25d366]/5 border-[#25d366]/30'}`}>
-                      <div className="text-[10px] uppercase tracking-wider font-mono font-bold flex items-center gap-1.5">
-                        <CreditCard className="w-3.5 h-3.5 text-white" /> GESTIÓN DE PAGO
-                      </div>
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[11px]">
-                          <span className="text-[#a1a1aa]">Cuota mensual:</span>
-                          <span className="text-white font-mono font-bold">€{selectedClient.monthlyFee}</span>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {/* WhatsApp Sender */}
+                      <div className="bg-[#1c1c1f] border border-[#27272a] rounded-[12px] p-3 shrink-0 flex flex-col space-y-2">
+                        <div className="text-[10px] uppercase tracking-wider text-[#8e8e93] font-bold flex items-center gap-1.5">
+                          <MessageCircle className="w-3.5 h-3.5 text-[#25d366]" /> WHATSAPP
                         </div>
-                        <div className="flex justify-between text-[11px]">
-                          <span className="text-[#a1a1aa]">Próximo pago:</span>
-                          <span className="text-white font-mono">{selectedClient.nextPaymentDate}</span>
-                        </div>
-                        <div className="flex justify-between text-[11px]">
-                          <span className="text-[#a1a1aa]">Estado:</span>
-                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${selectedClient.paymentStatus === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : selectedClient.paymentStatus === 'overdue' ? 'bg-[#ef4444]/10 text-[#ef4444]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
-                            {selectedClient.paymentStatus === 'paid' ? '✓ PAGADO' : selectedClient.paymentStatus === 'overdue' ? '⚠ VENCIDO' : '◷ PENDIENTE'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 pt-1">
                         <button
-                          onClick={() => onMarkPaymentPaid(selectedClient.id)}
-                          className="flex-1 bg-[#25d366] text-black font-bold text-[10px] py-1.5 rounded-lg hover:bg-[#20ba5a] transition-all font-mono"
+                          onClick={() => copyWhatsAppCredentials(selectedClient)}
+                          className="w-full bg-[#25d366] text-black font-bold text-[11px] py-2 px-3 rounded-[8px] hover:bg-[#20ba5a] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
                         >
-                          ✓ MARCAR PAGADO
+                          {copiedClientId === selectedClient.id ? (
+                            <><Check className="w-3.5 h-3.5" /> COPIADO</>
+                          ) : (
+                            <><Copy className="w-3.5 h-3.5" /> ENVIAR ACCESOS</>
+                          )}
                         </button>
                         <button
-                          onClick={() => {
-                            const newDate = prompt('Nueva fecha de pago (YYYY-MM-DD):', selectedClient.nextPaymentDate);
+                          onClick={() => handleResetPassword(selectedClient)}
+                          className="w-full bg-transparent text-[#d4f826] border border-[#3f3f46] font-bold text-[10px] py-1.5 px-3 rounded-[8px] hover:bg-[#3f3f46] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                        >
+                          <Shield className="w-3 h-3" /> NUEVA CONTRASENA
+                        </button>
+                      </div>
+
+                      {/* Payment Management Widget */}
+                      <div className={`bg-[#141416] border rounded-[12px] p-3 shrink-0 flex flex-col space-y-2 ${selectedClient.paymentStatus === 'overdue' ? 'border-[#ff5449]/30' : selectedClient.paymentStatus === 'pending' ? 'border-[#e5ba73]/30' : 'border-[#27272a]'}`}>
+                        <div className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1.5">
+                          <CreditCard className="w-3.5 h-3.5 text-white" /> PAGO
+                        </div>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-[#8e8e93]">Cuota:</span>
+                            <span className="text-white font-bold">€{selectedClient.monthlyFee}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-[#8e8e93]">Proximo:</span>
+                            <span className="text-white">{selectedClient.nextPaymentDate}</span>
+                          </div>
+                          <div className="flex justify-between text-[11px]">
+                            <span className="text-[#8e8e93]">Estado:</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[4px] ${selectedClient.paymentStatus === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : selectedClient.paymentStatus === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
+                              {selectedClient.paymentStatus === 'paid' ? 'PAGADO' : selectedClient.paymentStatus === 'overdue' ? 'VENCIDO' : 'PENDIENTE'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          <button
+                            onClick={() => onMarkPaymentPaid(selectedClient.id)}
+                            className="flex-1 bg-[#25d366] text-black font-bold text-[10px] py-1.5 rounded-[8px] hover:bg-[#20ba5a] active:scale-[0.98] transition-all"
+                          >
+                            MARCAR PAGADO
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newDate = prompt('Nueva fecha de pago (YYYY-MM-DD):', selectedClient.nextPaymentDate);
                             if (newDate) onUpdateClientPayment(selectedClient.id, { nextPaymentDate: newDate, paymentStatus: selectedClient.paymentStatus, monthlyFee: selectedClient.monthlyFee });
                           }}
                           className="bg-[#27272a] text-white hover:bg-[#3f3f46] text-[10px] px-3 py-1.5 rounded-lg transition-all font-mono"
@@ -647,98 +659,99 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       )}
                     </div>
                   </div>
+                </div>
 
                   {/* Routines Section */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="text-sm font-mono uppercase tracking-wider text-white font-bold flex items-center gap-2">
-                          <Dumbbell className="w-4 h-4 text-[#d4f826]" /> Días de Rutina Programados
+                        <h3 className="text-sm uppercase tracking-wider text-white font-bold flex items-center gap-2">
+                          <Dumbbell className="w-4 h-4 text-[#d4f826]" /> Dias de Rutina
                         </h3>
-                        <p className="text-xs text-[#71717a] mt-0.5">Estructura las sesiones de fuerza semanales para este usuario</p>
+                        <p className="text-xs text-[#8e8e93] mt-0.5">Estructura las sesiones semanales</p>
                       </div>
                       <button
                         onClick={() => setShowAddRoutineModal(true)}
-                        className="bg-transparent border border-[#3f3f46] text-white hover:border-[#d4f826] hover:text-[#d4f826] text-xs font-semibold py-1.5 px-3 rounded-xl transition-all flex items-center gap-1"
+                        className="bg-transparent border border-[#3f3f46] text-white hover:border-[#d4f826] hover:text-[#d4f826] text-[11px] font-semibold py-1.5 px-3 rounded-[28px] transition-all flex items-center gap-1"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Agregar Día
+                        <Plus className="w-3.5 h-3.5" /> Agregar Dia
                       </button>
                     </div>
 
                     {/* Routine Cards */}
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                       {clientRoutines.map((routine) => (
-                        <div key={routine.id} className="bg-[#18181b] border border-[#27272a] rounded-2xl overflow-hidden shadow-sm">
+                        <div key={routine.id} className="bg-[#141416] border border-[#27272a] rounded-[16px] overflow-hidden">
                           {/* Routine Header */}
-                          <div className="bg-[#1f1f23] p-4 border-b border-[#27272a] flex items-center justify-between flex-wrap gap-2">
+                          <div className="bg-[#1c1c1f] p-4 border-b border-[#27272a] flex items-center justify-between flex-wrap gap-2">
                             <div>
                               <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-bold text-white tracking-wide font-mono">{routine.name}</h4>
+                                <h4 className="text-sm font-bold text-white">{routine.name}</h4>
                                 {routine.isActive ? (
-                                  <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] px-1.5 py-0.5 rounded font-mono">HOY EN CURSO</span>
+                                  <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] px-1.5 py-0.5 rounded-full">ACTIVO</span>
                                 ) : (
-                                  <span className="text-[9px] bg-[#27272a] text-[#a1a1aa] px-1.5 py-0.5 rounded font-mono">RESERVA</span>
+                                  <span className="text-[9px] bg-[#27272a] text-[#8e8e93] px-1.5 py-0.5 rounded-full">RESERVA</span>
                                 )}
                               </div>
                               {routine.description && (
-                                <p className="text-xs text-[#a1a1aa] mt-0.5">{routine.description}</p>
+                                <p className="text-xs text-[#8e8e93] mt-0.5">{routine.description}</p>
                               )}
                             </div>
-                            <span className="text-[10px] text-[#71717a] font-mono">Asignado: {routine.createdAt}</span>
+                            <span className="text-[10px] text-[#8e8e93]">Asignado: {routine.createdAt}</span>
                           </div>
 
                           {/* Exercise Cards with Images */}
                           <div className="p-4 space-y-3">
                             {routine.exercises.length === 0 ? (
-                              <p className="text-xs text-[#52525b] italic p-2 text-center">No hay ejercicios cargados para este día.</p>
+                              <p className="text-xs text-[#52525b] italic p-2 text-center">No hay ejercicios cargados para este dia.</p>
                             ) : (
                               <div className="grid gap-3">
                                 {routine.exercises.map((ex, idx) => (
-                                  <div key={ex.id} className="bg-[#121214] border border-[#27272a] rounded-xl overflow-hidden flex flex-col sm:flex-row">
+                                  <div key={ex.id} className="bg-[#0a0a0c] border border-[#27272a] rounded-[12px] overflow-hidden flex flex-col sm:flex-row">
                                     {/* Exercise Image */}
                                     {ex.imageUrl ? (
-                                      <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#18181b]">
-                                        <img 
-                                          src={ex.imageUrl} 
+                                      <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416]">
+                                        <img
+                                          src={ex.imageUrl}
                                           alt={ex.name}
                                           className="w-full h-full object-cover"
                                         />
-                                        <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                                        <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">
                                           #{idx + 1}
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-gradient-to-br from-[#18181b] to-[#1f1f23] flex items-center justify-center">
+                                      <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416] flex items-center justify-center">
                                         <Dumbbell className="w-8 h-8 text-[#27272a]" />
-                                        <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">
+                                        <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">
                                           #{idx + 1}
                                         </div>
                                       </div>
                                     )}
-                                    
+
                                     {/* Exercise Details */}
                                     <div className="flex-1 p-3 flex flex-col justify-between">
                                       <div className="flex items-start justify-between gap-2">
                                         <div>
                                           <h5 className="text-xs font-bold text-white truncate">{ex.name}</h5>
                                           <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                            <span className="bg-[#27272a] text-[#a1a1aa] text-[9px] px-1.5 py-0.5 rounded">{ex.category}</span>
-                                            <span className="text-[10px] text-white font-mono">{ex.sets} × {ex.reps}</span>
-                                            <span className="text-[10px] text-[#d4f826] font-mono font-bold">{ex.weight} kg</span>
-                                            <span className="text-[10px] text-[#a1a1aa] font-mono">⏱ {ex.restTime}s</span>
+                                            <span className="bg-[#1c1c1f] text-[#8e8e93] text-[9px] px-1.5 py-0.5 rounded-[4px]">{ex.category}</span>
+                                            <span className="text-[10px] text-white">{ex.sets} x {ex.reps}</span>
+                                            <span className="text-[10px] text-[#d4f826] font-bold">{ex.weight} kg</span>
+                                            <span className="text-[10px] text-[#8e8e93]">{ex.restTime}s</span>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
                                           <button
                                             onClick={() => openEditExerciseModal(routine.id, ex)}
-                                            className="text-[#71717a] hover:text-[#d4f826] p-1 transition-all"
+                                            className="text-[#3f3f46] hover:text-[#d4f826] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
                                             title="Editar ejercicio"
                                           >
                                             <Pencil className="w-3.5 h-3.5" />
                                           </button>
                                           <button
                                             onClick={() => onDeleteExercise(routine.id, ex.id)}
-                                            className="text-[#71717a] hover:text-[#ef4444] p-1 transition-all"
+                                            className="text-[#3f3f46] hover:text-[#ff5449] p-1 rounded-[6px] hover:bg-[#ff5449]/10 transition-all"
                                             title="Eliminar ejercicio"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -746,7 +759,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                         </div>
                                       </div>
                                       {ex.notes && (
-                                        <p className="text-[10px] text-[#e5ba73] italic mt-2">💡 {ex.notes}</p>
+                                        <p className="text-[10px] text-[#e5ba73] mt-2">{ex.notes}</p>
                                       )}
                                     </div>
                                   </div>
@@ -755,8 +768,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                             )}
 
                             {/* Add Exercise Form */}
-                            <div className="bg-[#121214] border border-[#27272a] rounded-xl p-4 mt-4 space-y-3">
-                              <p className="text-[11px] font-mono uppercase tracking-wider text-[#d4f826] font-semibold flex items-center gap-1">
+                            <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4 mt-4 space-y-3">
+                              <p className="text-[11px] uppercase tracking-wider text-[#d4f826] font-semibold flex items-center gap-1">
                                 <Plus className="w-3 h-3" /> Cargar Nuevo Ejercicio
                               </p>
 
@@ -1007,43 +1020,43 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
         {/* TAB: MESSAGES */}
         {activeTab === 'messages' && (
-          <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#0e0e10]">
-            <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-[#1f1f23] flex flex-col shrink-0 max-h-[40vh] md:max-h-none">
-              <div className="p-4 border-b border-[#1f1f23] text-xs font-mono font-bold tracking-wider text-white">
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden bg-[#0a0a0c]">
+            <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-[#27272a] flex flex-col shrink-0 max-h-[40vh] md:max-h-none">
+              <div className="p-4 border-b border-[#27272a] text-xs font-bold tracking-wider text-white">
                 CONVERSACIONES
               </div>
-              <div className="flex-1 overflow-y-auto divide-y divide-[#1f1f23]">
+              <div className="flex-1 overflow-y-auto">
                 {clients.map(client => (
                   <div
                     key={client.id}
                     onClick={() => setSelectedClientId(client.id)}
-                    className={`p-4 cursor-pointer flex items-center gap-3 transition-all ${client.id === selectedClientId ? 'bg-[#18181b]' : 'hover:bg-[#121214]'}`}
+                    className={`p-4 cursor-pointer flex items-center gap-3 transition-colors border-b border-[#27272a] ${client.id === selectedClientId ? 'bg-[#1c1c1f]' : 'hover:bg-[#141416]'}`}
                   >
-                    <img src={client.selfieUrl || client.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    <img src={client.selfieUrl || client.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-[#27272a]" />
                     <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-white block truncate">{client.name}</span>
-                        <span className="text-[9px] text-[#71717a] font-mono">En Línea</span>
+                        <span className="text-[9px] text-[#8e8e93]">En Linea</span>
                       </div>
-                      <p className="text-[11px] text-[#a1a1aa] truncate mt-0.5">Ver chat y reportes</p>
+                      <p className="text-[11px] text-[#8e8e93] truncate mt-0.5">Ver chat y reportes</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col bg-[#121214]">
+            <div className="flex-1 flex flex-col bg-[#0a0a0c]">
               {selectedClient ? (
                 <>
-                  <div className="p-4 border-b border-[#1f1f23] bg-[#18181b] flex items-center justify-between">
+                  <div className="p-4 border-b border-[#27272a] bg-[#141416] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <img src={selectedClient.selfieUrl || selectedClient.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                      <img src={selectedClient.selfieUrl || selectedClient.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-[#27272a]" />
                       <div>
                         <span className="text-xs font-bold text-white block">{selectedClient.name}</span>
-                        <span className="text-[10px] text-[#25d366] font-mono">Asesorado Premium Activo</span>
+                        <span className="text-[10px] text-[#25d366]">Asesorado Premium</span>
                       </div>
                     </div>
-                    <span className="text-xs text-[#a1a1aa] font-mono">Canal Encriptado AURA</span>
+                    <span className="text-[10px] text-[#8e8e93]">Canal AURA</span>
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -1051,9 +1064,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       const isCoach = msg.senderId === coach.id;
                       return (
                         <div key={msg.id} className={`flex ${isCoach ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[75vw] md:max-w-md p-3 rounded-2xl text-xs ${isCoach ? 'bg-[#27272a] text-white rounded-tr-none border border-[#3f3f46]' : 'bg-[#18181b] text-[#f4f4f5] rounded-tl-none border border-[#27272a]'}`}>
+                          <div className={`max-w-[75vw] md:max-w-md p-3 rounded-2xl text-xs ${isCoach ? 'bg-[#27272a] text-white rounded-tr-none border border-[#3f3f46]' : 'bg-[#141416] text-[#e4e2e6] rounded-tl-none border border-[#27272a]'}`}>
                             <p className="whitespace-pre-line">{msg.content}</p>
-                            <span className="block text-[9px] text-[#71717a] mt-1 text-right font-mono">
+                            <span className="block text-[9px] text-[#8e8e93] mt-1 text-right">
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
@@ -1061,22 +1074,22 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       );
                     })}
                     {activeChatMessages.length === 0 && (
-                      <div className="text-center p-12 text-[#52525b] text-xs italic">
-                        No hay mensajes. Envía un saludo de motivación.
+                      <div className="text-center p-12 text-[#52525b] text-xs">
+                        No hay mensajes. Envia un saludo de motivacion.
                       </div>
                     )}
                   </div>
 
-                  <div className="p-4 border-t border-[#1f1f23] bg-[#18181b] flex gap-2">
+                  <div className="p-4 border-t border-[#27272a] bg-[#141416] flex gap-2">
                     <input
                       type="text"
                       placeholder={`Mensaje para ${selectedClient.name}...`}
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSendChat()}
-                      className="flex-1 bg-[#121214] border border-[#27272a] rounded-xl text-xs px-4 py-2.5 text-white placeholder-[#52525b] focus:outline-none focus:border-[#d4f826]"
+                      className="flex-1 bg-[#0a0a0c] border border-[#27272a] rounded-[8px] text-xs px-4 py-2.5 text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors"
                     />
-                    <button onClick={handleSendChat} className="bg-[#d4f826] text-black font-bold text-xs px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono">
+                    <button onClick={handleSendChat} className="bg-[#d4f826] text-black font-bold text-xs px-4 rounded-[28px] hover:bg-[#e2fa52] active:scale-[0.98] transition-all">
                       ENVIAR
                     </button>
                   </div>
@@ -1093,12 +1106,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
       {/* MODAL: CREATE CLIENT WITH SELFIE */}
       {showAddClientModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-4 md:p-6 relative max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold font-mono tracking-wider text-white mb-1 uppercase text-[#d4f826]">
-              Alta de Nuevo Atleta Premium
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 md:p-6 relative max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-bold tracking-wider text-white mb-1 uppercase">
+              <span className="text-[#d4f826]">Alta</span> de Nuevo Atleta
             </h3>
-            <p className="text-xs text-[#a1a1aa] mb-4">Crea la cuenta del cliente con foto de perfil para identificarlo.</p>
+            <p className="text-xs text-[#8e8e93] mb-4">Crea la cuenta del cliente con foto de perfil.</p>
 
             <form onSubmit={handleCreateClient} className="space-y-3.5">
               
@@ -1206,12 +1219,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
       {/* MODAL: CREATE ROUTINE DAY */}
       {showAddRoutineModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-4 md:p-6 relative">
-            <h3 className="text-base font-bold font-mono tracking-wider text-white mb-1 uppercase text-[#d4f826]">
-              Crear Nuevo Bloque de Día de Rutina
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 md:p-6 relative">
+            <h3 className="text-base font-bold tracking-wider text-white mb-1 uppercase">
+              <span className="text-[#d4f826]">Crear</span> Nuevo Dia de Rutina
             </h3>
-            <p className="text-xs text-[#a1a1aa] mb-4">Añade una sesión a la semana del deportista.</p>
+            <p className="text-xs text-[#8e8e93] mb-4">Anade una sesion a la semana del deportista.</p>
 
             <form onSubmit={handleCreateRoutineDay} className="space-y-4">
               <div>
@@ -1237,12 +1250,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
       {/* MODAL: EDIT EXERCISE */}
       {editingExercise && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-[#121214] border border-[#27272a] rounded-2xl w-full max-w-md p-4 md:p-6 relative max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold font-mono tracking-wider text-white mb-1 uppercase text-[#d4f826]">
-              Editar Ejercicio
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 md:p-6 relative max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-bold tracking-wider text-white mb-1 uppercase">
+              <span className="text-[#d4f826]">Editar</span> Ejercicio
             </h3>
-            <p className="text-xs text-[#a1a1aa] mb-4">Modifica cualquier campo del ejercicio seleccionado.</p>
+            <p className="text-xs text-[#8e8e93] mb-4">Modifica cualquier campo del ejercicio.</p>
 
             <div className="space-y-3">
               <div>
