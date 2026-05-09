@@ -111,6 +111,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [editExerciseRest, setEditExerciseRest] = useState(90);
   const [editExerciseNotes, setEditExerciseNotes] = useState('');
   const [editExerciseImageUrl, setEditExerciseImageUrl] = useState('');
+  const [editExerciseImageMode, setEditExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
+  const [editExerciseImageFile, setEditExerciseImageFile] = useState<File | null>(null);
 
   // Chat message active text
   const [chatInput, setChatInput] = useState('');
@@ -268,6 +270,15 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
+  // Handle edit exercise image upload
+  const handleEditExerciseImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditExerciseImageFile(file);
+    const url = URL.createObjectURL(file);
+    setEditExerciseImageUrl(url);
+  };
+
   // Handle editing exercise
   const openEditExerciseModal = (routineId: string, exercise: Exercise) => {
     setEditingExercise({ exercise, routineId });
@@ -279,11 +290,24 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setEditExerciseRest(exercise.restTime);
     setEditExerciseNotes(exercise.notes || '');
     setEditExerciseImageUrl(exercise.imageUrl || '');
+    setEditExerciseImageMode(exercise.imageUrl ? 'url' : 'url');
+    setEditExerciseImageFile(null);
+    if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
-  const handleSaveExerciseEdit = () => {
+  const handleSaveExerciseEdit = async () => {
     if (!editingExercise) return;
     const { exercise, routineId } = editingExercise;
+
+    let finalImageUrl = editExerciseImageUrl;
+    if (editExerciseImageMode === 'upload' && editExerciseImageFile) {
+      try {
+        finalImageUrl = await storageService.uploadExerciseImage(routineId, editExerciseImageFile);
+      } catch (err: any) {
+        alert('Error al subir imagen: ' + (err.message || 'desconocido'));
+        return;
+      }
+    }
 
     const updates: Partial<Exercise> = {};
     if (editExerciseName !== exercise.name) updates.name = editExerciseName;
@@ -293,12 +317,15 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     if (editExerciseWeight !== exercise.weight) updates.weight = editExerciseWeight;
     if (editExerciseRest !== exercise.restTime) updates.restTime = editExerciseRest;
     if (editExerciseNotes !== (exercise.notes || '')) updates.notes = editExerciseNotes;
-    if (editExerciseImageUrl !== (exercise.imageUrl || '')) updates.imageUrl = editExerciseImageUrl;
+    if (finalImageUrl !== (exercise.imageUrl || '')) updates.imageUrl = finalImageUrl;
 
     if (Object.keys(updates).length > 0) {
       onUpdateExercise(routineId, exercise.id, updates);
     }
     setEditingExercise(null);
+    setEditExerciseImageFile(null);
+    setEditExerciseImageMode('url');
+    if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
   // Copy WhatsApp Access Credentials Link
@@ -1317,9 +1344,112 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 <input type="text" value={editExerciseNotes} onChange={(e) => setEditExerciseNotes(e.target.value)} placeholder="Ej: Mantener excéntrica lenta, RPE 9..." className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
               </div>
 
-              <div>
-                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">URL de Imagen o GIF</label>
-                <input type="url" value={editExerciseImageUrl} onChange={(e) => setEditExerciseImageUrl(e.target.value)} placeholder="https://..." className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+              {/* IMAGE/GIF HYBRID SELECTOR */}
+              <div className="bg-[#18181b] border border-[#27272a] rounded-[12px] p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase tracking-wider text-white font-semibold flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[#d4f826]" /> Imagen o GIF del Ejercicio
+                  </label>
+                  <div className="flex bg-[#121214] rounded-[8px] p-0.5 border border-[#27272a]">
+                    <button
+                      type="button"
+                      onClick={() => { setEditExerciseImageMode('url'); setEditExerciseImageFile(null); if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = ''; }}
+                      className={`text-[9px] px-2 py-1 rounded-[4px] transition-all flex items-center gap-1 ${editExerciseImageMode === 'url' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#8e8e93]'}`}
+                    >
+                      <LinkIcon className="w-3 h-3" /> URL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditExerciseImageMode('upload'); setEditExerciseImageFile(null); setEditExerciseImageUrl(''); if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = ''; }}
+                      className={`text-[9px] px-2 py-1 rounded-[4px] transition-all flex items-center gap-1 ${editExerciseImageMode === 'upload' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#8e8e93]'}`}
+                    >
+                      <Upload className="w-3 h-3" /> Archivo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setEditExerciseImageMode('catalog'); setEditExerciseImageFile(null); setEditExerciseImageUrl(''); if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = ''; }}
+                      className={`text-[9px] px-2 py-1 rounded-[4px] transition-all flex items-center gap-1 ${editExerciseImageMode === 'catalog' ? 'bg-[#27272a] text-[#d4f826]' : 'text-[#8e8e93]'}`}
+                    >
+                      <Search className="w-3 h-3" /> Catálogo
+                    </button>
+                  </div>
+                </div>
+
+                {editExerciseImageMode === 'url' && (
+                  <input
+                    type="url"
+                    placeholder="https://... (URL de imagen o GIF animado)"
+                    value={editExerciseImageUrl.startsWith('data:') || editExerciseImageUrl.startsWith('blob:') ? '' : editExerciseImageUrl}
+                    onChange={(e) => setEditExerciseImageUrl(e.target.value)}
+                    className="w-full bg-[#121214] border border-[#27272a] rounded-[8px] text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                  />
+                )}
+
+                {editExerciseImageMode === 'upload' && (
+                  <div>
+                    <input
+                      ref={exerciseImageInputRef}
+                      type="file"
+                      accept="image/*,.gif"
+                      onChange={handleEditExerciseImageUpload}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => exerciseImageInputRef.current?.click()}
+                      className="w-full bg-[#121214] border border-dashed border-[#3f3f46] hover:border-[#d4f826] rounded-[8px] text-xs p-3 text-[#8e8e93] hover:text-[#d4f826] transition-all flex items-center justify-center gap-2"
+                    >
+                      <Upload className="w-4 h-4" /> Subir Imagen o GIF desde tu dispositivo
+                    </button>
+                  </div>
+                )}
+
+                {editExerciseImageMode === 'catalog' && (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Buscar en catálogo..."
+                      value={catalogSearch}
+                      onChange={(e) => setCatalogSearch(e.target.value)}
+                      className="w-full bg-[#121214] border border-[#27272a] rounded-[8px] text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                    />
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
+                      {globalPresets
+                        .filter(p => p.imageUrl && p.name.toLowerCase().includes(catalogSearch.toLowerCase()))
+                        .map(p => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => { setEditExerciseImageUrl(p.imageUrl || ''); setEditExerciseImageMode('url'); }}
+                            className="relative rounded-[8px] overflow-hidden border border-[#27272a] hover:border-[#d4f826] transition-all group"
+                            title={p.name}
+                          >
+                            <img src={p.imageUrl} alt={p.name} className="w-full h-16 object-cover" />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                              <span className="text-[8px] text-[#d4f826] text-center px-1">{p.name}</span>
+                            </div>
+                          </button>
+                        ))}
+                      {globalPresets.filter(p => p.imageUrl).length === 0 && (
+                        <p className="col-span-full text-[10px] text-[#8e8e93] text-center py-2">El catálogo aún no tiene GIFs. Pega una URL o sube tu propia imagen.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {editExerciseImageUrl && (
+                  <div className="relative w-24 h-24 rounded-[8px] overflow-hidden border border-[#27272a]">
+                    <img src={editExerciseImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setEditExerciseImageUrl('')}
+                      className="absolute top-0.5 right-0.5 bg-black/70 rounded-full p-0.5 text-[#ff5449] hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-3">
