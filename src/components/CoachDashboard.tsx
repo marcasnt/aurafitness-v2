@@ -110,6 +110,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     routineId: string;
   } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
+  const [editSelectedPreset, setEditSelectedPreset] = useState('');
+  const [editCustomExerciseName, setEditCustomExerciseName] = useState('');
   const [editExerciseCategory, setEditExerciseCategory] = useState<Exercise['category']>('Chest');
   const [editExerciseSets, setEditExerciseSets] = useState(4);
   const [editExerciseReps, setEditExerciseReps] = useState('10-12');
@@ -298,6 +300,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const openEditExerciseModal = (routineId: string, exercise: Exercise) => {
     setEditingExercise({ exercise, routineId });
     setEditExerciseName(exercise.name);
+    setEditSelectedPreset('');
+    setEditCustomExerciseName(exercise.name);
     setEditExerciseCategory(exercise.category);
     setEditExerciseSets(exercise.sets);
     setEditExerciseReps(exercise.reps);
@@ -334,8 +338,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       }
     }
 
+    const finalName = editSelectedPreset || editCustomExerciseName || editExerciseName;
+
     const updates: Partial<Exercise> = {};
-    if (editExerciseName !== exercise.name) updates.name = editExerciseName;
+    if (finalName !== exercise.name) updates.name = finalName;
     if (editExerciseCategory !== exercise.category) updates.category = editExerciseCategory;
     if (editExerciseSets !== exercise.sets) updates.sets = editExerciseSets;
     if (editExerciseReps !== exercise.reps) updates.reps = editExerciseReps;
@@ -354,6 +360,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setEditExerciseImageFile(null);
     setEditExerciseImageMode('url');
     setEditExerciseSetDetails([]);
+    setEditSelectedPreset('');
+    setEditCustomExerciseName('');
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
@@ -1362,18 +1370,62 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
             <p className="text-xs text-[#8e8e93] mb-4">Modifica cualquier campo del ejercicio.</p>
 
             <div className="space-y-3">
-              <div>
-                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Nombre del Ejercicio</label>
-                <input
-                  type="text"
-                  value={editExerciseName}
-                  onChange={(e) => setEditExerciseName(e.target.value)}
-                  className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Grupo Muscular</label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Ejercicio Preestablecido</label>
+                  <select
+                    value={editSelectedPreset}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setEditSelectedPreset(name);
+                      if (name) setEditCustomExerciseName('');
+                      const preset = globalPresets.find(p => p.name === name);
+                      if (preset) {
+                        setEditExerciseCategory(preset.category);
+                        setEditExerciseSets(preset.sets);
+                        setEditExerciseReps(preset.reps);
+                        setEditExerciseWeight(preset.weight);
+                        if (preset.setDetails && preset.setDetails.length > 0) {
+                          setEditExerciseSetDetails(preset.setDetails);
+                        } else {
+                          const arr = Array.from({ length: preset.sets }, () => ({
+                            reps: parseInt(preset.reps) || 10,
+                            weight: preset.weight,
+                          }));
+                          setEditExerciseSetDetails(arr);
+                        }
+                        setEditExerciseRest(preset.restTime);
+                        setEditExerciseNotes(preset.notes || '');
+                        setEditExerciseImageUrl(preset.imageUrl || '');
+                        setEditExerciseImageMode(preset.imageUrl ? 'url' : 'url');
+                      }
+                      setEditExerciseImageFile(null);
+                      if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
+                    }}
+                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                  >
+                    <option value="">-- Elige Movimiento --</option>
+                    {presetsLoading && <option value="" disabled>Cargando catálogo...</option>}
+                    {globalPresets.map((p) => (
+                      <option key={p.id} value={p.name}>{p.name} ({p.category})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">O nombre personalizado</label>
+                  <input
+                    type="text"
+                    placeholder="Ej: Sentadilla profunda"
+                    value={editCustomExerciseName}
+                    onChange={(e) => {
+                      setEditCustomExerciseName(e.target.value);
+                      if (e.target.value) setEditSelectedPreset('');
+                    }}
+                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Grupo Muscular</label>
                 <select
                   value={editExerciseCategory}
                   onChange={(e) => setEditExerciseCategory(e.target.value as Exercise['category'])}
@@ -1390,11 +1442,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                   <option value="Glutes">Glúteos</option>
                   <option value="Forearms">Antebrazos</option>
                   <option value="Full Body">Cuerpo Completo</option>
-                  <option value="Home Workout">En Casa</option>
-                </select>
-              </div>
+                   <option value="Home Workout">En Casa</option>
+                 </select>
+               </div>
+             </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="md:col-span-3">
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-[10px] text-[#a1a1aa]">Series Individuales (Reps · Peso)</label>
