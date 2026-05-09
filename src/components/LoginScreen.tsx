@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dumbbell, ShieldCheck, User as UserIcon, Lock, ArrowRight } from 'lucide-react';
+import { Dumbbell, ShieldCheck, User as UserIcon, Lock } from 'lucide-react';
 import { User } from '../types/fitness';
 import { authService } from '../lib/supabase-auth';
 
@@ -20,7 +20,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     try {
       let user: User | null = null;
-
       if (email.toLowerCase() === 'marcasnt@gmail.com') {
         user = await authService.loginCoach(email, password);
       } else {
@@ -34,98 +33,123 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError('Error de conexión. Intenta de nuevo.');
+      setError('Error de conexion. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
+  const createRipple = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const circle = document.createElement('span');
+    const diameter = Math.max(rect.width, rect.height);
+    const radius = diameter / 2;
+
+    circle.style.width = circle.style.height = `${diameter}px`;
+    circle.style.left = `${event.clientX - rect.left - radius}px`;
+    circle.style.top = `${event.clientY - rect.top - radius}px`;
+    circle.className = 'absolute rounded-full bg-black/10 animate-ripple pointer-events-none';
+
+    const existing = button.getElementsByClassName('animate-ripple')[0];
+    if (existing) existing.remove();
+    button.appendChild(circle);
+
+    setTimeout(() => circle.remove(), 400);
+  };
+
   return (
-    <div className="min-h-screen bg-[#09090b] text-[#f4f4f5] flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-[#d4f826] opacity-[0.03] rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-[#bba15c] opacity-[0.03] rounded-full blur-[150px] pointer-events-none" />
-
-      <div className="w-full max-w-md bg-[#121214] border border-[#27272a] rounded-2xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl relative z-10 transition-all duration-300 hover:border-[#3f3f46]">
-
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 rounded-xl bg-gradient-to-br from-[#1e1e24] to-[#2a2a32] border border-[#3f3f46] text-[#d4f826] mb-3 shadow-md">
-            <Dumbbell className="w-8 h-8 animate-pulse" />
+    <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center p-4">
+      {/* Card */}
+      <div className="w-full max-w-[420px] bg-[#141416] rounded-[16px] p-6 sm:p-10 animate-fade-in-up">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="w-12 h-12 bg-[#1c1c1f] rounded-[12px] flex items-center justify-center mx-auto mb-5">
+            <Dumbbell className="w-6 h-6 text-[#d4f826]" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-widest text-white font-mono">
-            AURA <span className="text-[#d4f826] font-sans font-light">//</span> ELITE
+          <h1 className="text-[28px] sm:text-[32px] font-extrabold tracking-[0.15em] text-white uppercase">
+            AURA <span className="text-[#d4f826] font-light">//</span> ELITE
           </h1>
-          <p className="text-[#a1a1aa] text-[10px] sm:text-xs uppercase tracking-widest mt-1">
-            Plataforma de Alta Performance & Seguimiento
+          <p className="text-xs text-[#8e8e93] mt-2 tracking-[0.1em] uppercase font-medium">
+            Plataforma de Alto Rendimiento
           </p>
         </div>
 
-        <div className="bg-[#18181b] border-l-2 border-[#d4f826] p-3 rounded-r-lg mb-6 text-xs text-[#a1a1aa] flex items-start gap-2">
+        {/* Info chip */}
+        <div className="bg-[#1c1c1f] rounded-[8px] px-4 py-3 mb-8 flex items-start gap-3">
           <ShieldCheck className="w-4 h-4 text-[#d4f826] shrink-0 mt-0.5" />
-          <div>
-            <span className="text-white font-semibold">Acceso exclusivo:</span> Ingresa con tus credenciales para gestionar clientes y rutinas.
-          </div>
+          <p className="text-xs text-[#a1a1aa] leading-relaxed">
+            <span className="text-white font-medium">Acceso exclusivo:</span> Ingresa con tus credenciales para gestionar clientes y rutinas.
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs uppercase tracking-wider text-[#a1a1aa] mb-1.5 font-semibold">
-              Correo Electrónico
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Email Input */}
+          <div className="relative group">
+            <input
+              type="email"
+              id="login-email"
+              required
+              placeholder=" "
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="peer w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200 placeholder-transparent"
+            />
+            <label
+              htmlFor="login-email"
+              className="absolute left-4 top-3.5 text-[#8e8e93] text-[16px] transition-all duration-200 pointer-events-none peer-focus:top-1.5 peer-focus:text-[11px] peer-focus:text-[#d4f826] peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:text-[#8e8e93] peer-[:not(:placeholder-shown)]:bg-[#141416] peer-[:not(:placeholder-shown)]:px-1 peer-[:not(:placeholder-shown)]:-ml-1"
+            >
+              Correo Electronico
             </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#71717a]">
-                <UserIcon className="w-4 h-4" />
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="marcasnt@gmail.com"
-                required
-                className="w-full bg-[#18181b] border border-[#27272a] rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#d4f826] focus:ring-1 focus:ring-[#d4f826] transition-all placeholder-[#52525b]"
-              />
-            </div>
+            <UserIcon className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46]" />
           </div>
 
-          <div>
-            <label className="block text-xs uppercase tracking-wider text-[#a1a1aa] mb-1.5 font-semibold">
-              Contraseña
+          {/* Password Input */}
+          <div className="relative group">
+            <input
+              type="password"
+              id="login-password"
+              required
+              placeholder=" "
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="peer w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3.5 text-[16px] text-white focus:outline-none focus:border-[#d4f826] transition-colors duration-200 placeholder-transparent"
+            />
+            <label
+              htmlFor="login-password"
+              className="absolute left-4 top-3.5 text-[#8e8e93] text-[16px] transition-all duration-200 pointer-events-none peer-focus:top-1.5 peer-focus:text-[11px] peer-focus:text-[#d4f826] peer-[:not(:placeholder-shown)]:top-1.5 peer-[:not(:placeholder-shown)]:text-[11px] peer-[:not(:placeholder-shown)]:text-[#8e8e93] peer-[:not(:placeholder-shown)]:bg-[#141416] peer-[:not(:placeholder-shown)]:px-1 peer-[:not(:placeholder-shown)]:-ml-1"
+            >
+              Contrasena
             </label>
-            <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#71717a]">
-                <Lock className="w-4 h-4" />
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                required
-                className="w-full bg-[#18181b] border border-[#27272a] rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-[#d4f826] focus:ring-1 focus:ring-[#d4f826] transition-all placeholder-[#52525b]"
-              />
-            </div>
+            <Lock className="absolute right-4 top-4 w-4 h-4 text-[#3f3f46]" />
           </div>
 
+          {/* Error */}
           {error && (
-            <div className="text-xs text-[#ef4444] bg-[#ef4444]/10 border border-[#ef4444]/20 p-3 rounded-xl font-medium">
+            <div className="bg-[#2d1b1b] border border-[#ff5449]/30 rounded-[8px] px-4 py-3 text-xs text-[#ff5449] animate-fade-in-down">
               {error}
             </div>
           )}
 
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#d4f826] text-black font-semibold text-sm py-3 px-4 rounded-xl hover:bg-[#e2fa52] focus:outline-none transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-[#d4f826]/10 font-mono tracking-wide mt-2 disabled:opacity-50"
+            onMouseDown={createRipple}
+            className="relative w-full bg-[#d4f826] text-black font-semibold text-sm uppercase tracking-[0.05em] py-3.5 rounded-[28px] hover:bg-[#e2fa52] active:scale-[0.98] transition-all duration-150 overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+              <span className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin inline-block" />
             ) : (
-              <>INGRESAR AL SISTEMA <ArrowRight className="w-4 h-4" /></>
+              'Ingresar al Sistema'
             )}
           </button>
         </form>
 
+        {/* Footer */}
         <div className="mt-8 pt-6 border-t border-[#27272a] text-center">
-          <p className="text-[10px] text-[#52525b]">
+          <p className="text-[10px] text-[#52525b] tracking-wide">
             Aura Fitness Elite v2 · Coach Marvin Martinez
           </p>
         </div>

@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+@layer base {
+  html {
+    font-family: 'Geist', sans-serif;
+  }
+  body {
+    background-color: #0a0a0c;
+    color: #e4e2e6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ripple {
+  to { transform: scale(2.5); opacity: 0; }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 400ms ease-out forwards;
+}
+
+.animate-fade-in-down {
+  animation: fade-in-down 200ms ease-out forwards;
+}
+
+.animate-ripple {
+  animation: ripple 400ms linear forwards;
+}
