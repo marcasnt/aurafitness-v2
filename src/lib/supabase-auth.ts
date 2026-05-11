@@ -25,6 +25,7 @@ const mapProfileToUser = (p: Profile): User => ({
   paymentStatus: p.payment_status,
   paymentHistory: (p.payment_history || []) as { date: string; amount: number; status: 'paid' | 'pending' | 'overdue'; method?: string }[],
   weightHistory: p.weight_history,
+  measurementsHistory: p.measurements_history,
 });
 
 const mapRoutineToRoutineDay = (r: Routine, exercises: Exercise[]): RoutineDay => ({
@@ -125,8 +126,11 @@ export const clientsService = {
     return authService.getClients();
   },
 
-  async create(client: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }): Promise<User> {
+  async create(client: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: import('../types/fitness').MeasurementsEntry }): Promise<User> {
     const passwordHash = await bcrypt.hash(client.password, 10);
+
+    const today = new Date().toISOString().split('T')[0];
+    const measurementsHistory = client.initialMeasurements ? [client.initialMeasurements] : [];
 
     const { data, error } = await supabase
       .from('profiles')
@@ -141,10 +145,11 @@ export const clientsService = {
         streak: 0,
         adherence_rate: 100,
         monthly_fee: client.monthlyFee || 0,
-        next_payment_date: new Date().toISOString().split('T')[0],
+        next_payment_date: today,
         payment_status: 'pending',
         weight_history: [],
         payment_history: [],
+        measurements_history: measurementsHistory,
       })
       .select()
       .single();
@@ -168,6 +173,7 @@ export const clientsService = {
     if (updates.paymentStatus !== undefined) updateData.payment_status = updates.paymentStatus;
     if (updates.paymentHistory !== undefined) updateData.payment_history = updates.paymentHistory;
     if (updates.weightHistory !== undefined) updateData.weight_history = updates.weightHistory;
+    if (updates.measurementsHistory !== undefined) updateData.measurements_history = updates.measurementsHistory;
 
     const { data, error } = await supabase
       .from('profiles')

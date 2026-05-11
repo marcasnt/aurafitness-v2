@@ -181,7 +181,7 @@ export default function App() {
     setCoachProfile(null);
   };
 
-  const handleAddClient = async (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }): Promise<User | undefined> => {
+  const handleAddClient = async (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: import('./types/fitness').MeasurementsEntry }): Promise<User | undefined> => {
     try {
       const created = await clientsService.create(newClient);
       if (mountedRef.current) setClients(prev => [created, ...prev]);
@@ -380,6 +380,24 @@ export default function App() {
     }
   };
 
+  const handleAddMeasurementsEntry = async (clientId: string, entry: import('./types/fitness').MeasurementsEntry) => {
+    if (!currentUser) return;
+    const client = clients.find(c => c.id === clientId);
+    const currentHistory = client?.measurementsHistory || [];
+    const newHistory = [entry, ...currentHistory];
+
+    try {
+      const updated = await clientsService.update(clientId, { measurementsHistory: newHistory });
+      if (mountedRef.current) setClients(prev => prev.map(c => c.id === clientId ? updated : c));
+      if (currentUser.id === clientId) {
+        setCurrentUser(updated);
+      }
+    } catch (e: any) {
+      console.error('Error adding measurements entry:', e);
+      showError('Error al guardar medidas');
+    }
+  };
+
   const handleUploadClientAvatar = async (clientId: string, file: File) => {
     try {
       const url = await storageService.uploadAvatar(clientId, file);
@@ -430,6 +448,7 @@ export default function App() {
             onMarkPaymentPaid={handleMarkPaymentPaid}
             onSendMessage={handleSendMessage}
             onMarkMessagesRead={handleMarkMessagesRead}
+            onUpdateClient={handleUpdateClient}
             onLogout={handleLogout}
           />
         ) : (
@@ -453,6 +472,7 @@ export default function App() {
               }
             }}
             onAddWeightEntry={handleAddWeightEntry}
+            onAddMeasurementsEntry={handleAddMeasurementsEntry}
             onUpdateClientAvatar={async (id, file) => {
               try {
                 const url = await storageService.uploadAvatar(id, file);

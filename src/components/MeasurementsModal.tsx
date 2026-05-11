@@ -1,0 +1,129 @@
+import React, { useState, useEffect } from 'react';
+import { X, Ruler } from 'lucide-react';
+import { MeasurementsEntry } from '../types/fitness';
+
+interface MeasurementsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (entry: MeasurementsEntry) => void;
+  lastMeasurements?: MeasurementsEntry;
+  clientName?: string;
+}
+
+export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasurements, clientName }: MeasurementsModalProps) {
+  const [height, setHeight] = useState('');
+  const [weight, setWeight] = useState('');
+  const [neck, setNeck] = useState('');
+  const [waist, setWaist] = useState('');
+  const [hips, setHips] = useState('');
+  const [thighs, setThighs] = useState('');
+  const [bicepsLeft, setBicepsLeft] = useState('');
+  const [bicepsRight, setBicepsRight] = useState('');
+
+  useEffect(() => {
+    if (isOpen && lastMeasurements) {
+      setHeight(lastMeasurements.height ? String(lastMeasurements.height) : '');
+      setWeight(lastMeasurements.weight ? String(lastMeasurements.weight) : '');
+      setNeck(lastMeasurements.neck ? String(lastMeasurements.neck) : '');
+      setWaist(lastMeasurements.waist ? String(lastMeasurements.waist) : '');
+      setHips(lastMeasurements.hips ? String(lastMeasurements.hips) : '');
+      setThighs(lastMeasurements.thighs ? String(lastMeasurements.thighs) : '');
+      setBicepsLeft(lastMeasurements.bicepsLeft ? String(lastMeasurements.bicepsLeft) : '');
+      setBicepsRight(lastMeasurements.bicepsRight ? String(lastMeasurements.bicepsRight) : '');
+    } else if (isOpen) {
+      setHeight(''); setWeight(''); setNeck(''); setWaist('');
+      setHips(''); setThighs(''); setBicepsLeft(''); setBicepsRight('');
+    }
+  }, [isOpen, lastMeasurements]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const entry: MeasurementsEntry = {
+      date: new Date().toISOString().split('T')[0],
+      height: parseFloat(height) || 0,
+      weight: parseFloat(weight) || 0,
+      neck: parseFloat(neck) || 0,
+      waist: parseFloat(waist) || 0,
+      hips: parseFloat(hips) || 0,
+      thighs: parseFloat(thighs) || 0,
+      bicepsLeft: parseFloat(bicepsLeft) || 0,
+      bicepsRight: parseFloat(bicepsRight) || 0,
+    };
+    onSave(entry);
+    onClose();
+  };
+
+  const inputClass = "w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono transition-colors";
+  const labelClass = "block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase tracking-wider";
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+      <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 md:p-6 relative max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-base font-bold tracking-wider text-white uppercase">
+            <span className="text-[#d4f826]">Registrar</span> Medidas
+          </h3>
+          <button onClick={onClose} className="text-[#52525b] hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-xs text-[#8e8e93] mb-4">
+          {clientName ? `Actualizando medidas de ${clientName}` : 'Actualiza tus medidas corporales para seguir tu progreso.'}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Ruler className="w-4 h-4 text-[#d4f826]" />
+            <span className="text-[10px] text-[#a1a1aa] font-mono uppercase tracking-wider">Datos Corporales</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <div>
+              <label className={labelClass}>Altura (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="175" value={height} onChange={(e) => setHeight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Peso (kg)</label>
+              <input type="text" inputMode="numeric" placeholder="75.5" value={weight} onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Cuello (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="38" value={neck} onChange={(e) => setNeck(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Cintura (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="82" value={waist} onChange={(e) => setWaist(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Cadera (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="98" value={hips} onChange={(e) => setHips(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Piernas (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="58" value={thighs} onChange={(e) => setThighs(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Bíceps Izq. (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="35" value={bicepsLeft} onChange={(e) => setBicepsLeft(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Bíceps Der. (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="35.5" value={bicepsRight} onChange={(e) => setBicepsRight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3">
+            <button type="button" onClick={onClose} className="bg-transparent hover:bg-[#18181b] text-[#a1a1aa] text-xs font-semibold py-2 px-4 rounded-xl transition-all">
+              Cancelar
+            </button>
+            <button type="submit" className="bg-[#d4f826] text-black font-bold text-xs py-2 px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono">
+              GUARDAR MEDIDAS
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

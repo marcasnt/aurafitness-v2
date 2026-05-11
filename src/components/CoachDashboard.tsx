@@ -5,8 +5,10 @@ import {
   Phone, Shield, BarChart3, Flame,
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard
 } from 'lucide-react';
-import { User, RoutineDay, Exercise, Message } from '../types/fitness';
+import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types/fitness';
 import { clientsService, exercisesService, storageService } from '../lib/supabase-auth';
+import MeasurementsModal from './MeasurementsModal';
+import { MeasurementCards, WeightChart, BodyMeasurementsChart, BicepsChart } from './ProgressCharts';
 
 interface CoachDashboardProps {
   coach: User;
@@ -25,6 +27,7 @@ interface CoachDashboardProps {
   onSendMessage: (receiverId: string, content: string) => void;
   onMarkMessagesRead?: (senderId: string) => void;
   onUploadClientAvatar: (clientId: string, file: File) => void;
+  onUpdateClient: (clientId: string, updates: Partial<User>) => void;
   onLogout: () => void;
 }
 
@@ -45,7 +48,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onSendMessage,
   onMarkMessagesRead,
   onUploadClientAvatar,
-  onLogout
+  onUpdateClient,
+  onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<'clients' | 'messages'>('clients');
   const [selectedClientId, setSelectedClientIdState] = useState<string | null>(clients[0]?.id || null);
@@ -69,6 +73,14 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [newClientSelfiePreview, setNewClientSelfiePreview] = useState<string>('');
   const [newClientFee, setNewClientFee] = useState(120);
   const [newClientPaymentDate, setNewClientPaymentDate] = useState('');
+  const [newClientHeight, setNewClientHeight] = useState('');
+  const [newClientWeight, setNewClientWeight] = useState('');
+  const [newClientNeck, setNewClientNeck] = useState('');
+  const [newClientWaist, setNewClientWaist] = useState('');
+  const [newClientHips, setNewClientHips] = useState('');
+  const [newClientThighs, setNewClientThighs] = useState('');
+  const [newClientBicepsLeft, setNewClientBicepsLeft] = useState('');
+  const [newClientBicepsRight, setNewClientBicepsRight] = useState('');
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,6 +134,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [editExerciseImageMode, setEditExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
   const [editExerciseImageFile, setEditExerciseImageFile] = useState<File | null>(null);
   const [editExerciseSetDetails, setEditExerciseSetDetails] = useState<{ reps: number; weight: number }[]>([]);
+
+  // Measurements modal
+  const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
+  const [measurementsClientId, setMeasurementsClientId] = useState<string | null>(null);
 
   // Chat message active text
   const [chatInput, setChatInput] = useState('');
@@ -189,6 +205,21 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     e.preventDefault();
     if (!newClientName || !newClientEmail || !newClientPassword) return;
 
+    const today = new Date().toISOString().split('T')[0];
+    const weightVal = parseFloat(newClientWeight) || 75;
+
+    const initialMeasurements = {
+      date: today,
+      height: parseFloat(newClientHeight) || 0,
+      weight: weightVal,
+      neck: parseFloat(newClientNeck) || 0,
+      waist: parseFloat(newClientWaist) || 0,
+      hips: parseFloat(newClientHips) || 0,
+      thighs: parseFloat(newClientThighs) || 0,
+      bicepsLeft: parseFloat(newClientBicepsLeft) || 0,
+      bicepsRight: parseFloat(newClientBicepsRight) || 0,
+    };
+
     const newClient = {
       name: newClientName,
       email: newClientEmail,
@@ -200,7 +231,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       avatar: newClientSelfiePreview || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200`,
       selfieUrl: newClientSelfiePreview || '',
       monthlyFee: newClientFee,
-      weightHistory: [{ date: new Date().toISOString().split('T')[0], weight: 75 }]
+      weightHistory: [{ date: today, weight: weightVal }],
+      initialMeasurements,
     };
 
     onAddClient(newClient).then((created: User | undefined) => {
@@ -1105,18 +1137,65 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                     </div>
                   </div>
 
-                  {/* Weight History */}
-                  <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4">
-                    <h4 className="text-xs uppercase tracking-wider text-white font-mono font-bold flex items-center gap-2 mb-3">
-                      <TrendingUp className="w-4 h-4 text-[#e5ba73]" /> Historial de Peso Corporal
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {selectedClient.weightHistory?.map((entry, idx) => (
-                        <div key={idx} className="bg-[#121214] p-3 rounded-xl border border-[#27272a] text-center">
-                          <p className="text-[10px] text-[#71717a]">{entry.date}</p>
-                          <p className="text-sm font-bold text-[#e5ba73] font-mono mt-1">{entry.weight} kg</p>
-                        </div>
-                      )) || <p className="text-xs text-[#52525b]">No hay registros.</p>}
+                  {/* Progress Dashboard */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs uppercase tracking-wider text-white font-mono font-bold flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-[#d4f826]" /> Progreso del Atleta
+                      </h4>
+                      <button
+                        onClick={() => { setMeasurementsClientId(selectedClient.id); setShowMeasurementsModal(true); }}
+                        className="bg-[#d4f826] text-black font-bold text-[10px] py-1.5 px-3 rounded-xl hover:bg-[#e2fa52] transition-all flex items-center gap-1.5"
+                      >
+                        <Ruler className="w-3 h-3" />
+                        Actualizar Medidas
+                      </button>
+                    </div>
+
+                    <MeasurementCards
+                      latest={selectedClient.measurementsHistory?.[0]}
+                      previous={selectedClient.measurementsHistory?.[1]}
+                    />
+
+                    {selectedClient.weightHistory && selectedClient.weightHistory.length > 1 && (
+                      <WeightChart data={selectedClient.weightHistory} />
+                    )}
+
+                    {selectedClient.measurementsHistory && selectedClient.measurementsHistory.length > 1 && (
+                      <BodyMeasurementsChart
+                        data={selectedClient.measurementsHistory.map(m => ({
+                          date: m.date,
+                          waist: m.waist || undefined,
+                          hips: m.hips || undefined,
+                          neck: m.neck || undefined,
+                          thighs: m.thighs || undefined,
+                        }))}
+                      />
+                    )}
+
+                    {selectedClient.measurementsHistory && selectedClient.measurementsHistory.length > 0 && (
+                      <BicepsChart
+                        data={selectedClient.measurementsHistory.map(m => ({
+                          date: m.date,
+                          bicepsLeft: m.bicepsLeft || undefined,
+                          bicepsRight: m.bicepsRight || undefined,
+                        }))}
+                      />
+                    )}
+
+                    {/* Weight History Grid */}
+                    <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4">
+                      <h4 className="text-[10px] uppercase tracking-wider text-[#a1a1aa] font-mono font-bold mb-3">
+                        Registros de Peso
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {selectedClient.weightHistory?.map((entry, idx) => (
+                          <div key={idx} className="bg-[#121214] p-3 rounded-xl border border-[#27272a] text-center">
+                            <p className="text-[10px] text-[#71717a]">{entry.date}</p>
+                            <p className="text-sm font-bold text-[#d4f826] font-mono mt-1">{entry.weight} kg</p>
+                          </div>
+                        )) || <p className="text-xs text-[#52525b]">No hay registros.</p>}
+                      </div>
                     </div>
                   </div>
                 </>
@@ -1313,6 +1392,44 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 <div>
                   <label className="block text-[11px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Fecha 1er Pago</label>
                   <input type="date" value={newClientPaymentDate} onChange={(e) => setNewClientPaymentDate(e.target.value)} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                </div>
+              </div>
+
+              <div className="border-t border-[#27272a] pt-3 mt-1">
+                <label className="block text-[10px] text-[#a1a1aa] mb-2 font-mono uppercase font-semibold tracking-wider">Medidas Corporales Iniciales (cm)</label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Altura (cm)</label>
+                    <input type="text" inputMode="numeric" placeholder="175" value={newClientHeight} onChange={(e) => setNewClientHeight(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Peso (kg)</label>
+                    <input type="text" inputMode="numeric" placeholder="75.5" value={newClientWeight} onChange={(e) => setNewClientWeight(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Cuello</label>
+                    <input type="text" inputMode="numeric" placeholder="38" value={newClientNeck} onChange={(e) => setNewClientNeck(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Cintura</label>
+                    <input type="text" inputMode="numeric" placeholder="82" value={newClientWaist} onChange={(e) => setNewClientWaist(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Cadera</label>
+                    <input type="text" inputMode="numeric" placeholder="98" value={newClientHips} onChange={(e) => setNewClientHips(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Piernas</label>
+                    <input type="text" inputMode="numeric" placeholder="58" value={newClientThighs} onChange={(e) => setNewClientThighs(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Bíceps Izq.</label>
+                    <input type="text" inputMode="numeric" placeholder="35" value={newClientBicepsLeft} onChange={(e) => setNewClientBicepsLeft(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Bíceps Der.</label>
+                    <input type="text" inputMode="numeric" placeholder="35.5" value={newClientBicepsRight} onChange={(e) => setNewClientBicepsRight(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
                 </div>
               </div>
 
@@ -1658,6 +1775,21 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         </div>
       )}
 
+      <MeasurementsModal
+        isOpen={showMeasurementsModal}
+        onClose={() => setShowMeasurementsModal(false)}
+        onSave={(entry) => {
+          if (measurementsClientId) {
+            const client = clients.find(c => c.id === measurementsClientId);
+            const currentHistory = client?.measurementsHistory || [];
+            onUpdateClient(measurementsClientId, {
+              measurementsHistory: [entry, ...currentHistory],
+            });
+          }
+        }}
+        lastMeasurements={clients.find(c => c.id === measurementsClientId)?.measurementsHistory?.[0]}
+        clientName={clients.find(c => c.id === measurementsClientId)?.name}
+      />
     </div>
   );
 };

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Scale, Plus, Play, Pause, FastForward, Image as ImageIcon, Camera } from 'lucide-react';
-import { User, RoutineDay, WorkoutLog, Message } from '../types/fitness';
+import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Scale, Plus, Play, Pause, FastForward, Image as ImageIcon, Camera, Ruler, TrendingDown, TrendingUp as TrendUpIcon } from 'lucide-react';
+import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
+import MeasurementsModal from './MeasurementsModal';
+import { WeightChart, BodyMeasurementsChart, BicepsChart, MeasurementCards, WorkoutHistoryChart } from './ProgressCharts';
 
 interface Props {
   client: User; coach: User | null; routines: RoutineDay[]; logs: WorkoutLog[]; messages: Message[];
@@ -8,11 +10,12 @@ interface Props {
   onAddLog: (l: WorkoutLog) => void; onSendMessage: (r: string, c: string) => void;
   onMarkMessagesRead?: (senderId: string) => void;
   onUpdateClientStreak: (id: string, s: number) => void; onAddWeightEntry: (id: string, w: number) => void;
+  onAddMeasurementsEntry: (id: string, entry: MeasurementsEntry) => void;
   onUpdateClientAvatar: (id: string, file: File) => void;
   onLogout: () => void;
 }
 
-export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddWeightEntry, onUpdateClientAvatar, onLogout }) => {
+export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddWeightEntry, onAddMeasurementsEntry, onUpdateClientAvatar, onLogout }) => {
   const [tab, setTab] = useState<'w'|'m'|'c'>('w');
   const clientRoutines = routines.filter(r => r.clientId === client.id);
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
@@ -33,6 +36,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   const [cmt, setCmt] = useState(''); const [ok, setOk] = useState(false);
   const [nw, setNw] = useState(''); const [ci, setCi] = useState('');
   const [fi, setFi] = useState<string|null>(null);
+  const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
 
   // Cambio de avatar del cliente
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -323,14 +327,154 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
             <div className="bg-[#141416] border border-[#27272a] p-8 rounded-[16px] text-center text-xs text-[#8e8e93] italic">Rutina no encontrada.</div>
           )}
         </div>)}
-        {tab==='m'&&(<div className="space-y-6"><div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-5"><h3 className="text-xs uppercase  tracking-wider text-white font-bold flex items-center gap-2 mb-2"><Scale className="w-4 h-4 text-[#e5ba73]"/>Registrar Peso</h3><form onSubmit={(e)=>{e.preventDefault();const p=parseFloat(nw);if(!isNaN(p)&&p>0){onAddWeightEntry(client.id,p);setNw('');}}} className="flex gap-3"><div className="relative flex-1"><input type="text" inputMode="decimal" placeholder="78.5" required value={nw} onChange={(e)=>setNw(e.target.value)} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs px-4 py-2.5 text-white focus:outline-none focus:border-[#d4f826] "/><span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs  text-[#52525b] font-bold">KG</span></div><button type="submit" className="bg-[#27272a] text-white hover:text-black hover:bg-[#d4f826] border border-[#3f3f46]  text-xs font-bold px-4 rounded-[12px] transition-all flex items-center gap-1"><Plus className="w-3.5 h-3.5"/></button></form></div><div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-5"><h3 className="text-xs uppercase  tracking-wider text-white font-bold mb-3">Historial de Peso</h3><div className="divide-y divide-[#27272a]">{client.weightHistory?.map((en,i)=>(<div key={i} className="py-2.5 flex justify-between items-center text-xs"><span className="text-[#8e8e93] ">{en.date}</span><span className="text-white font-bold  text-sm bg-[#1c1c1f] px-3 py-1 rounded-[8px] border border-[#27272a]">{en.weight} kg</span></div>))||<p className="text-xs text-[#52525b] italic">Sin registros.</p>}</div></div><div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-5"><h3 className="text-xs uppercase  tracking-wider text-white font-bold flex items-center gap-2 mb-3"><Trophy className="w-4 h-4 text-[#d4f826]"/>Sesiones</h3><div className="space-y-3">{ml.length===0?<p className="text-xs text-[#52525b] p-4 text-center italic">¡Completa tu primer bloque!</p>:ml.map(l=>(<div key={l.id} className="bg-[#1c1c1f] border border-[#27272a] rounded-[12px] p-3 flex justify-between items-center text-xs"><div><span className="text-[9px]  text-[#8e8e93] block">{l.date}</span><h4 className="text-xs font-bold text-white  mt-0.5">{l.routineName}</h4><p className="text-[11px] text-[#8e8e93] mt-0.5">{l.durationMinutes} min</p></div><span className="text-xs bg-[#d4f826]/10 text-[#d4f826] px-2 py-1 rounded  font-bold">{l.feelingScore}/5</span></div>))}</div></div></div>)}
+        {tab==='m'&&(
+          <div className="space-y-4 pb-20">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-white uppercase tracking-wider">Tu <span className="text-[#d4f826]">Evolución</span></h2>
+                <p className="text-[10px] text-[#8e8e93] mt-0.5">Seguimiento de medidas y rendimiento</p>
+              </div>
+              <button
+                onClick={() => setShowMeasurementsModal(true)}
+                className="bg-[#d4f826] text-black font-bold text-[10px] py-2 px-3 rounded-xl hover:bg-[#e2fa52] transition-all flex items-center gap-1.5"
+              >
+                <Ruler className="w-3.5 h-3.5" />
+                Registrar Medidas
+              </button>
+            </div>
+
+            {/* Stats Cards */}
+            <MeasurementCards
+              latest={client.measurementsHistory?.[0]}
+              previous={client.measurementsHistory?.[1]}
+            />
+
+            {/* Weight Chart */}
+            {client.weightHistory && client.weightHistory.length > 1 && (
+              <WeightChart data={client.weightHistory} />
+            )}
+
+            {/* Body Measurements Chart */}
+            {client.measurementsHistory && client.measurementsHistory.length > 1 && (
+              <BodyMeasurementsChart
+                data={client.measurementsHistory.map(m => ({
+                  date: m.date,
+                  waist: m.waist || undefined,
+                  hips: m.hips || undefined,
+                  neck: m.neck || undefined,
+                  thighs: m.thighs || undefined,
+                }))}
+              />
+            )}
+
+            {/* Biceps Chart */}
+            {client.measurementsHistory && client.measurementsHistory.length > 0 && (
+              <BicepsChart
+                data={client.measurementsHistory.map(m => ({
+                  date: m.date,
+                  bicepsLeft: m.bicepsLeft || undefined,
+                  bicepsRight: m.bicepsRight || undefined,
+                }))}
+              />
+            )}
+
+            {/* Quick Weight Entry */}
+            <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
+              <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
+                <Scale className="w-4 h-4 text-[#d4f826]"/> Registrar Peso
+              </h3>
+              <form onSubmit={(e)=>{e.preventDefault();const p=parseFloat(nw);if(!isNaN(p)&&p>0){onAddWeightEntry(client.id,p);setNw('');}}} className="flex gap-3">
+                <div className="relative flex-1">
+                  <input type="text" inputMode="decimal" placeholder="78.5" required value={nw} onChange={(e)=>setNw(e.target.value)} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs px-4 py-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#52525b] font-bold">KG</span>
+                </div>
+                <button type="submit" className="bg-[#27272a] text-white hover:text-black hover:bg-[#d4f826] border border-[#3f3f46] text-xs font-bold px-4 rounded-[12px] transition-all flex items-center gap-1">
+                  <Plus className="w-3.5 h-3.5"/>
+                </button>
+              </form>
+            </div>
+
+            {/* Measurements History Table */}
+            {client.measurementsHistory && client.measurementsHistory.length > 0 && (
+              <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
+                <h3 className="text-xs uppercase tracking-wider text-white font-bold mb-3 flex items-center gap-2">
+                  <Ruler className="w-4 h-4 text-[#00e5ff]"/> Historial de Medidas
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="text-[#52525b] border-b border-[#27272a]">
+                        <th className="text-left py-2 font-mono uppercase">Fecha</th>
+                        <th className="text-right py-2 font-mono uppercase">Peso</th>
+                        <th className="text-right py-2 font-mono uppercase">Cintura</th>
+                        <th className="text-right py-2 font-mono uppercase">Cadera</th>
+                        <th className="text-right py-2 font-mono uppercase">Bíceps Izq</th>
+                        <th className="text-right py-2 font-mono uppercase">Bíceps Der</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#27272a]">
+                      {client.measurementsHistory.map((m, i) => (
+                        <tr key={i}>
+                          <td className="py-2 text-[#8e8e93]">{m.date}</td>
+                          <td className="py-2 text-right text-white font-bold">{m.weight || '--'} <span className="text-[#52525b] font-normal">kg</span></td>
+                          <td className="py-2 text-right text-[#00e5ff]">{m.waist || '--'} <span className="text-[#52525b]">cm</span></td>
+                          <td className="py-2 text-right text-[#ff00ff]">{m.hips || '--'} <span className="text-[#52525b]">cm</span></td>
+                          <td className="py-2 text-right text-[#2979ff]">{m.bicepsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
+                          <td className="py-2 text-right text-[#ff5449]">{m.bicepsRight || '--'} <span className="text-[#52525b]">cm</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Workout History */}
+            {ml.length > 0 && (
+              <WorkoutHistoryChart
+                data={ml.map(l => ({ date: l.date, duration: l.durationMinutes, feeling: l.feelingScore }))}
+              />
+            )}
+
+            {/* Session List */}
+            <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
+              <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
+                <Trophy className="w-4 h-4 text-[#d4f826]"/> Sesiones Completadas
+              </h3>
+              <div className="space-y-3">
+                {ml.length===0?
+                  <p className="text-xs text-[#52525b] p-4 text-center italic">💪 ¡Completa tu primer bloque!</p>
+                  :ml.map(l=>(
+                    <div key={l.id} className="bg-[#1c1c1f] border border-[#27272a] rounded-[12px] p-3 flex justify-between items-center text-xs">
+                      <div>
+                        <span className="text-[9px] text-[#8e8e93] block">{l.date}</span>
+                        <h4 className="text-xs font-bold text-white mt-0.5">{l.routineName}</h4>
+                        <p className="text-[11px] text-[#8e8e93] mt-0.5">{l.durationMinutes} min</p>
+                      </div>
+                      <span className="text-xs bg-[#d4f826]/10 text-[#d4f826] px-2 py-1 rounded font-bold">{l.feelingScore}/5</span>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          </div>
+        )}
         {tab==='c'&&(<div className="bg-[#141416] border border-[#27272a] rounded-[12px] overflow-hidden flex flex-col h-[calc(100dvh-14rem)] md:h-[480px]"><div className="bg-[#1c1c1f] p-4 border-b border-[#27272a] flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-ping"/><span className="text-xs  font-bold text-white uppercase">COACH {coach?.name?.toUpperCase() || 'MARVIN'}</span></div><span className="text-[10px] bg-[#27272a] text-[#8e8e93] px-2 py-0.5 rounded ">24/7</span></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0a0a0c]">{cm.map(m=>{const me=m.senderId===client.id;return(<div key={m.id} className={`flex ${me?'justify-end':'justify-start'}`}><div className={`max-w-xs p-3 rounded-[12px] text-xs ${me?'bg-[#27272a] text-white rounded-tr-none border border-[#3f3f46]':'bg-[#1c1c1f] text-[#e4e2e6] rounded-tl-none border border-[#27272a]'}`}><p className="whitespace-pre-line">{m.content}</p><span className="block text-[8px] text-[#8e8e93] mt-1 text-right ">{new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></div></div>);})}{cm.length===0&&<div className="text-center p-12 text-[#52525b] text-xs italic">Envía un mensaje a tu coach.</div>}</div><div className="p-3 bg-[#1c1c1f] border-t border-[#27272a] flex gap-2"><input type="text" placeholder="Escribe al coach..." value={ci} onChange={(e)=>setCi(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter') handleSendChat();}} className="flex-1 bg-[#141416] border border-[#27272a] rounded-[8px] text-xs px-4 py-2 text-white focus:outline-none focus:border-[#d4f826]"/><button onClick={handleSendChat} className="bg-[#d4f826] text-black font-bold p-2 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-95"><Send className="w-4 h-4"/></button></div></div>)}
       </main>
+
+      <MeasurementsModal
+        isOpen={showMeasurementsModal}
+        onClose={() => setShowMeasurementsModal(false)}
+        onSave={(entry) => onAddMeasurementsEntry(client.id, entry)}
+        lastMeasurements={client.measurementsHistory?.[0]}
+      />
+
       {sm&&(<div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"><div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-4 md:p-6 relative">{!ok?(<><div className="text-center mb-4"><div className="inline-flex p-2.5 bg-[#d4f826]/10 text-[#d4f826] rounded-[12px] border border-[#d4f826]/20 mb-2"><Trophy className="w-5 h-5"/></div><h3 className="text-base font-bold  text-white uppercase">Confirmar Bitácora</h3></div><form onSubmit={fin} className="space-y-4"><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Duración (min)</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={dur || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setDur(v === '' ? 0 : Number(v)); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[12px] text-xs p-2.5 text-white "/></div><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Esfuerzo (RPE)</label><select value={feel} onChange={(e)=>setFeel(Number(e.target.value))} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[12px] text-xs p-2.5 text-white "><option value="5">5/5 Máximo</option><option value="4">4/5 Muy bueno</option><option value="3">3/5 Moderado</option><option value="2">2/5 Descarga</option><option value="1">1/5 Liviano</option></select></div><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Comentarios</label><textarea placeholder="Notas para el coach..." value={cmt} onChange={(e)=>setCmt(e.target.value)} rows={3} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs p-2.5 text-white"/></div><div className="flex gap-2 pt-2"><button type="button" onClick={()=>setSm(false)} className="flex-1 text-[#8e8e93] text-xs py-2.5 rounded-[8px] hover:bg-[#242428] transition-all active:scale-[0.98]">Volver</button><button type="submit" className="flex-1 bg-[#d4f826] text-black font-extrabold text-xs py-2.5 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-[0.98] ">ENVIAR</button></div></form></>):(<div className="text-center py-6 space-y-4"><div className="w-14 h-14 bg-[#25d366]/20 text-[#25d366] rounded-full flex items-center justify-center mx-auto border border-[#25d366]/30"><Trophy className="w-7 h-7"/></div><h3 className="text-lg font-bold  text-white uppercase">¡ENTRENAMIENTO SUBIDO!</h3><p className="text-xs text-[#8e8e93]">Reporte enviado al Coach Marvin.</p><button onClick={resetRoutine} className="w-full bg-[#d4f826] text-black font-bold text-xs py-2.5 rounded-[12px] ">VOLVER A RUTINAS</button></div>)}</div></div>)}
       {fi&&(<div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={()=>setFi(null)}><div className="relative max-w-2xl w-full"><img src={fi} alt="Ejercicio" className="w-full rounded-[16px]"/><button onClick={()=>setFi(null)} className="absolute top-3 right-3 bg-black/70 text-white rounded-full p-2 hover:bg-[#ff5449] transition-all"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button><div className="absolute bottom-3 left-3 right-3 bg-black/70 rounded-[12px] p-3 text-center"><p className="text-xs text-[#d4f826]  font-bold">IMAGEN DEMOSTRATIVA</p><p className="text-[10px] text-[#8e8e93] mt-0.5">Toca fuera para cerrar</p></div></div></div>)}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#141416] border-t border-[#27272a] grid grid-cols-3 text-center text-[10px] text-[#8e8e93] py-1.5 pb-4 z-40">
         <button onClick={()=>setTab('w')} className={`flex flex-col items-center gap-0.5 ${tab==='w'?'text-[#d4f826]':''}`}><Dumbbell className="w-4 h-4"/><span>Rutina</span></button>
-        <button onClick={()=>setTab('m')} className={`flex flex-col items-center gap-0.5 ${tab==='m'?'text-[#d4f826]':''}`}><TrendingUp className="w-4 h-4"/><span>Pesos</span></button>
+        <button onClick={()=>setTab('m')} className={`flex flex-col items-center gap-0.5 ${tab==='m'?'text-[#d4f826]':''}`}><TrendingUp className="w-4 h-4"/><span>Progreso</span></button>
         <button onClick={()=>setTab('c')} className={`flex flex-col items-center gap-0.5 relative ${tab==='c'?'text-[#d4f826]':''}`}>
           <MessageSquare className="w-4 h-4"/>
           <span>Coach</span>

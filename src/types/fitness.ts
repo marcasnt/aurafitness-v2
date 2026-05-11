@@ -5,6 +5,21 @@ export interface PaymentEntry {
   method?: string;
 }
 
+export interface BodyMeasurements {
+  neck: number; // cm
+  waist: number; // cm
+  hips: number; // cm
+  thighs: number; // cm
+  bicepsLeft: number; // cm
+  bicepsRight: number; // cm
+  height: number; // cm
+  weight: number; // kg
+}
+
+export interface MeasurementsEntry extends BodyMeasurements {
+  date: string; // YYYY-MM-DD
+}
+
 export interface User {
   id: string;
   email: string;
@@ -18,6 +33,7 @@ export interface User {
   streak: number;
   adherenceRate: number;
   weightHistory?: { date: string; weight: number }[];
+  measurementsHistory?: MeasurementsEntry[];
   // Payment fields
   monthlyFee: number;
   nextPaymentDate: string; // YYYY-MM-DD
