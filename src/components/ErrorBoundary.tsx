@@ -29,7 +29,13 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): State | null {
+    // Si el error viene de una extension del navegador, NO crashear la app.
+    // Solo lo logueamos y dejamos que React siga renderizando.
+    if (isExtensionError(error)) {
+      console.warn('[AURA] ErrorBoundary ignorando error de extension:', error.message);
+      return null;
+    }
     return { hasError: true, error };
   }
 
