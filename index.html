@@ -5,6 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AURA // Elite Coaching & Routine Tracker</title>
     <link href="https://api.fontshare.com/v2/css?f[]=geist@400,500,600,700,800,900&display=swap" rel="stylesheet" />
+    <script>
+      // Interceptar errores de extensiones de Chrome que inyectan codigo en el DOM
+      // y causan ReferenceError al re-renderizar React.
+      window.__EXTENSION_ERRORS_BLOCKED = [];
+      window.addEventListener('error', function(e) {
+        var msg = e.message || '';
+        var blockedPatterns = [
+          'Ruler is not defined',
+          'PageRuler',
+          'rulerContentScript',
+          'chrome-extension',
+          'moz-extension',
+          'safari-extension'
+        ];
+        var isExtensionError = blockedPatterns.some(function(p) {
+          return msg.indexOf(p) !== -1 ||
+            (e.filename && e.filename.indexOf('chrome-extension://') !== -1) ||
+            (e.filename && e.filename.indexOf('moz-extension://') !== -1);
+        });
+        if (isExtensionError) {
+          e.preventDefault();
+          e.stopPropagation();
+          window.__EXTENSION_ERRORS_BLOCKED.push(msg);
+          console.warn('[AURA] Ignored browser extension error:', msg);
+          return true;
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(e) {
+        var msg = (e.reason && e.reason.message) || String(e.reason);
+        if (msg.indexOf('Ruler is not defined') !== -1 || msg.indexOf('PageRuler') !== -1) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.warn('[AURA] Ignored browser extension promise rejection:', msg);
+        }
+      }, true);
+    </script>
   </head>
   <body>
     <div id="root"></div>

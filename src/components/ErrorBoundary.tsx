@@ -9,7 +9,21 @@ interface State {
   error?: Error;
 }
 
+function isExtensionError(error?: Error): boolean {
+  if (!error) return false;
+  const msg = error.message || '';
+  return (
+    msg.includes('Ruler is not defined') ||
+    msg.includes('PageRuler') ||
+    msg.includes('chrome-extension') ||
+    msg.includes('moz-extension') ||
+    msg.includes('safari-extension')
+  );
+}
+
 export class ErrorBoundary extends Component<Props, State> {
+  private autoRecoverTimer?: ReturnType<typeof setTimeout>;
+
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
@@ -23,6 +37,20 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
+  componentDidUpdate(_prevProps: Props, prevState: State) {
+    if (!prevState.hasError && this.state.hasError && isExtensionError(this.state.error)) {
+      // Si el error es de una extension, intentar auto-recuperarse despues de 1.5s
+      // dandole tiempo al usuario de ver el mensaje.
+      this.autoRecoverTimer = setTimeout(() => {
+        this.setState({ hasError: false, error: undefined });
+      }, 1500);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.autoRecoverTimer) clearTimeout(this.autoRecoverTimer);
+  }
+
   handleReload = () => {
     window.location.reload();
   };
@@ -33,6 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      const extError = isExtensionError(this.state.error);
       return (
         <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex flex-col items-center justify-center p-6">
           <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-8 max-w-md w-full text-center space-y-4">
@@ -40,9 +69,16 @@ export class ErrorBoundary extends Component<Props, State> {
               <span className="text-2xl">⚠️</span>
             </div>
             <h2 className="text-lg font-bold text-white">Algo salió mal</h2>
-            <p className="text-xs text-[#8e8e93]">
-              La app encontró un error inesperado. Puedes intentar recargar o volver atrás.
-            </p>
+            {extError ? (
+              <p className="text-xs text-[#e5ba73]">
+                Detectamos que una <strong>extensión de tu navegador</strong> está causando conflictos.
+                Desactivá temporalmente extensiones como "Page Ruler" o abrí la app en una ventana de incógnito.
+              </p>
+            ) : (
+              <p className="text-xs text-[#8e8e93]">
+                La app encontró un error inesperado. Puedes intentar recargar o volver atrás.
+              </p>
+            )}
             {this.state.error && (
               <div className="bg-[#0a0a0c] rounded-[8px] p-3 text-left overflow-auto max-h-32">
                 <code className="text-[10px] text-[#ff5449] font-mono break-all">
@@ -55,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 className="bg-[#27272a] text-white text-xs font-semibold px-4 py-2.5 rounded-[8px] hover:bg-[#3f3f46] transition-all"
               >
-                Intentar de nuevo
+                {extError ? 'Continuar (auto en 1.5s)' : 'Intentar de nuevo'}
               </button>
               <button
                 onClick={this.handleReload}
