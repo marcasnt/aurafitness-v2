@@ -3,7 +3,8 @@ import {
   Users, Calendar, MessageSquare, Plus, Search, Dumbbell, 
   TrendingUp, MessageCircle, Copy, Check, Trash2, Pencil,
   Phone, Shield, BarChart3, Flame,
-  Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard
+  Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard,
+  User as UserIcon, ClipboardList
 } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types/fitness';
@@ -11,7 +12,7 @@ import { clientsService, exercisesService, storageService } from '../lib/supabas
 import MeasurementsModal from './MeasurementsModal';
 import { MeasurementCards } from './ProgressCharts';
 import ProgressLineChart from './ProgressLineChart';
-import { calculateBodyFat } from '../lib/bodyFatCalculator';
+import { calculateBodyFat, getBodyFatColor } from '../lib/bodyFatCalculator';
 
 interface CoachDashboardProps {
   coach: User;
@@ -31,6 +32,7 @@ interface CoachDashboardProps {
   onMarkMessagesRead?: (senderId: string) => void;
   onUploadClientAvatar: (clientId: string, file: File) => void;
   onUpdateClient: (clientId: string, updates: Partial<User>) => void;
+  onAddMeasurementsEntry: (clientId: string, entry: MeasurementsEntry) => void;
   onLogout: () => void;
 }
 
@@ -52,9 +54,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onMarkMessagesRead,
   onUploadClientAvatar,
   onUpdateClient,
+  onAddMeasurementsEntry,
   onLogout,
 }) => {
   const [activeTab, setActiveTab] = useState<'clients' | 'messages'>('clients');
+  const [clientWorkspaceTab, setClientWorkspaceTab] = useState<'profile' | 'routines' | 'progress'>('profile');
   const [selectedClientId, setSelectedClientIdState] = useState<string | null>(clients[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [clientPasswords, setClientPasswords] = useState<Record<string, string>>({});
@@ -694,6 +698,30 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
             <div className="flex-1 bg-[#0a0a0c] overflow-y-auto p-4 md:p-6 space-y-6">
               {selectedClient ? (
                 <>
+                  {/* Workspace Tabs */}
+                  <div className="flex bg-[#141416] border border-[#27272a] rounded-[12px] p-1 mb-4">
+                    {([
+                      { id: 'profile', label: 'Perfil', Icon: UserIcon },
+                      { id: 'routines', label: 'Rutinas', Icon: ClipboardList },
+                      { id: 'progress', label: 'Progreso', Icon: TrendingUp },
+                    ] as const).map(({ id, label, Icon }) => (
+                      <button
+                        key={id}
+                        onClick={() => setClientWorkspaceTab(id)}
+                        className={`flex-1 flex items-center justify-center gap-1.5 text-[11px] font-bold py-2 rounded-[8px] transition-all ${
+                          clientWorkspaceTab === id
+                            ? 'bg-[#1c1c1f] text-[#d4f826] border border-[#27272a]'
+                            : 'text-[#8e8e93] hover:text-white'
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {clientWorkspaceTab === 'profile' && (
+                  <div className="space-y-6">
                   {/* Athlete Profile Banner */}
                   <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-5 flex flex-col md:flex-row md:items-center justify-between gap-5">
                     {/* Input oculto para editar foto del cliente */}
@@ -807,26 +835,46 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                           € CUOTA
                         </button>
                       </div>
-                      {/* Payment history mini list */}
+                      {/* Payment history full table */}
                       {selectedClient.paymentHistory && selectedClient.paymentHistory.length > 0 && (
                         <div className="border-t border-[#27272a] pt-2">
-                          <p className="text-[9px] text-[#71717a] uppercase font-mono font-bold mb-1">Historial de Pagos</p>
-                          <div className="space-y-0.5">
-                            {selectedClient.paymentHistory.slice(0, 3).map((ph, i) => (
-                              <div key={i} className="flex justify-between text-[10px]">
-                                <span className="text-[#a1a1aa] font-mono">{ph.date}</span>
-                                <span className={`font-mono font-bold ${ph.status === 'paid' ? 'text-[#25d366]' : ph.status === 'overdue' ? 'text-[#ef4444]' : 'text-[#e5ba73]'}`}>
-                                  €{ph.amount} {ph.status === 'paid' ? '✓' : ph.status === 'overdue' ? '⚠' : '◷'}
-                                </span>
-                              </div>
-                            ))}
+                          <p className="text-[9px] text-[#71717a] uppercase font-mono font-bold mb-2">Historial Completo de Pagos</p>
+                          <div className="max-h-40 overflow-y-auto">
+                            <table className="w-full text-[10px]">
+                              <thead>
+                                <tr className="text-[#52525b] border-b border-[#27272a]">
+                                  <th className="text-left py-1.5 font-mono uppercase">Fecha</th>
+                                  <th className="text-right py-1.5 font-mono uppercase">Monto</th>
+                                  <th className="text-right py-1.5 font-mono uppercase">Estado</th>
+                                  <th className="text-right py-1.5 font-mono uppercase">Metodo</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#27272a]">
+                                {selectedClient.paymentHistory.map((ph, i) => (
+                                  <tr key={i}>
+                                    <td className="py-1.5 text-[#a1a1aa] font-mono">{ph.date}</td>
+                                    <td className="py-1.5 text-right text-white font-bold">€{ph.amount}</td>
+                                    <td className="py-1.5 text-right">
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] ${ph.status === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : ph.status === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
+                                        {ph.status === 'paid' ? 'PAGADO' : ph.status === 'overdue' ? 'VENCIDO' : 'PENDIENTE'}
+                                      </span>
+                                    </td>
+                                    <td className="py-1.5 text-right text-[#8e8e93]">{ph.method || '--'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         </div>
                       )}
                     </div>
+                    </div>
                   </div>
-                </div>
+                  </div>
+                  )}
 
+                  {clientWorkspaceTab === 'routines' && (
+                  <div className="space-y-4">
                   {/* Routines Section */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1206,7 +1254,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       )}
                     </div>
                   </div>
+                  </div>
+                  )}
 
+                  {clientWorkspaceTab === 'progress' && (
+                  <div className="space-y-4">
                   {/* Progress Dashboard */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -1244,7 +1296,58 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         )) || <p className="text-xs text-[#52525b]">No hay registros.</p>}
                       </div>
                     </div>
+
+                    {/* Measurements History Table */}
+                    {selectedClient.measurementsHistory && selectedClient.measurementsHistory.length > 0 && (
+                      <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4">
+                        <h4 className="text-[10px] uppercase tracking-wider text-[#a1a1aa] font-mono font-bold mb-3 flex items-center gap-2">
+                          <RulerIcon className="w-3.5 h-3.5" /> Historial de Medidas
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-[10px]">
+                            <thead>
+                              <tr className="text-[#52525b] border-b border-[#27272a]">
+                                <th className="text-left py-2 font-mono uppercase">Fecha</th>
+                                <th className="text-right py-2 font-mono uppercase">Peso</th>
+                                <th className="text-right py-2 font-mono uppercase">% Grasa</th>
+                                <th className="text-right py-2 font-mono uppercase">Cintura</th>
+                                <th className="text-right py-2 font-mono uppercase">Cadera</th>
+                                <th className="text-right py-2 font-mono uppercase">Cuello</th>
+                                <th className="text-right py-2 font-mono uppercase">Pierna Izq</th>
+                                <th className="text-right py-2 font-mono uppercase">Pierna Der</th>
+                                <th className="text-right py-2 font-mono uppercase">Bíceps Izq</th>
+                                <th className="text-right py-2 font-mono uppercase">Bíceps Der</th>
+                                <th className="text-right py-2 font-mono uppercase">Por</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#27272a]">
+                              {selectedClient.measurementsHistory.map((m, i) => (
+                                <tr key={i}>
+                                  <td className="py-2 text-[#8e8e93]">{m.date}</td>
+                                  <td className="py-2 text-right text-white font-bold">{m.weight || '--'} <span className="text-[#52525b] font-normal">kg</span></td>
+                                  <td className="py-2 text-right font-bold" style={{ color: m.bodyFat ? getBodyFatColor(m.bodyFat, selectedClient.gender || 'male') : '#8e8e93' }}>{m.bodyFat || '--'} <span className="text-[#52525b] font-normal">%</span></td>
+                                  <td className="py-2 text-right text-[#00e5ff]">{m.waist || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right text-[#ff00ff]">{m.hips || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right text-[#e5ba73]">{m.neck || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right text-[#76ff03]">{m.thighsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right text-[#00e5ff]">{m.thighsRight || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right text-[#2979ff]">{m.bicepsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right text-[#ff5449]">{m.bicepsRight || '--'} <span className="text-[#52525b]">cm</span></td>
+                                  <td className="py-2 text-right">
+                                    <span className={`text-[8px] font-bold px-1 py-0.5 rounded-[4px] ${m.recordedBy === 'client' ? 'bg-[#00e5ff]/10 text-[#00e5ff]' : 'bg-[#d4f826]/10 text-[#d4f826]'}`}>
+                                      {m.recordedBy === 'client' ? 'CLI' : 'COA'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
+                  </div>
+                  )}
                 </>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-center p-12 text-[#52525b]">
@@ -1854,11 +1957,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         onClose={() => setShowMeasurementsModal(false)}
         onSave={(entry) => {
           if (measurementsClientId) {
-            const client = clients.find(c => c.id === measurementsClientId);
-            const currentHistory = client?.measurementsHistory || [];
-            onUpdateClient(measurementsClientId, {
-              measurementsHistory: [entry, ...currentHistory],
-            });
+            onAddMeasurementsEntry(measurementsClientId, entry);
           }
         }}
         lastMeasurements={clients.find(c => c.id === measurementsClientId)?.measurementsHistory?.[0]}

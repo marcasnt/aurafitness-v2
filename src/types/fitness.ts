@@ -20,6 +20,7 @@ export interface BodyMeasurements {
 export interface MeasurementsEntry extends BodyMeasurements {
   date: string; // YYYY-MM-DD
   bodyFat?: number; // % calculado automáticamente
+  recordedBy?: 'coach' | 'client'; // quién registró esta entrada
 }
 
 export interface User {

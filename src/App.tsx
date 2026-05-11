@@ -385,7 +385,22 @@ export default function App() {
     if (!currentUser) return;
     const client = clients.find(c => c.id === clientId);
     const currentHistory = client?.measurementsHistory || [];
-    const newHistory = [entry, ...currentHistory];
+
+    // Agregar quién registró la entrada
+    const entryWithRecorder = {
+      ...entry,
+      recordedBy: currentUser.id === clientId ? 'client' as const : 'coach' as const,
+    };
+
+    // Sobrescribir si ya existe entrada del mismo día (misma fecha)
+    const existingIndex = currentHistory.findIndex(m => m.date === entry.date);
+    let newHistory: import('./types/fitness').MeasurementsEntry[];
+    if (existingIndex >= 0) {
+      newHistory = [...currentHistory];
+      newHistory[existingIndex] = entryWithRecorder;
+    } else {
+      newHistory = [entryWithRecorder, ...currentHistory];
+    }
 
     try {
       const updated = await clientsService.update(clientId, { measurementsHistory: newHistory });
@@ -451,6 +466,7 @@ export default function App() {
               onSendMessage={handleSendMessage}
               onMarkMessagesRead={handleMarkMessagesRead}
               onUpdateClient={handleUpdateClient}
+              onAddMeasurementsEntry={handleAddMeasurementsEntry}
               onLogout={handleLogout}
             />
           ) : (

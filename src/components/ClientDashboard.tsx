@@ -20,6 +20,7 @@ interface Props {
 
 export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddWeightEntry, onAddMeasurementsEntry, onUpdateClientAvatar, onLogout }) => {
   const [tab, setTab] = useState<'w'|'m'|'c'>('w');
+  const [progressSubTab, setProgressSubTab] = useState<'summary'|'evolution'|'history'>('summary');
   const clientRoutines = routines.filter(r => r.clientId === client.id);
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
   const ar = clientRoutines.find(r => r.id === selectedRoutineId) || clientRoutines[0] || null;
@@ -347,101 +348,140 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
               </button>
             </div>
 
-            {/* Stats Cards */}
-            <MeasurementCards
+            {/* Sub-tabs */}
+            <div className="flex bg-[#141416] border border-[#27272a] rounded-[12px] p-1">
+              {([
+                { id: 'summary', label: 'Resumen' },
+                { id: 'evolution', label: 'Evolución' },
+                { id: 'history', label: 'Historial' },
+              ] as const).map(({ id, label }) => (
+                <button
+                  key={id}
+                  onClick={() => setProgressSubTab(id)}
+                  className={`flex-1 text-[11px] font-bold py-2 rounded-[8px] transition-all ${
+                    progressSubTab === id
+                      ? 'bg-[#1c1c1f] text-[#d4f826] border border-[#27272a]'
+                      : 'text-[#8e8e93] hover:text-white'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* Stats Cards — Resumen */}
+            {progressSubTab === 'summary' && (
+              <div className="space-y-4">
+                <MeasurementCards
               latest={client.measurementsHistory?.[0]}
               previous={client.measurementsHistory?.[1]}
               gender={client.gender}
             />
 
-            {/* Interactive Progress Chart */}
-            <ProgressLineChart user={client} title="Tu Evolución" />
+              </div>
+            )}
 
-            {/* Quick Weight Entry */}
-            <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
-              <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
-                <Scale className="w-4 h-4 text-[#d4f826]"/> Registrar Peso
-              </h3>
-              <form onSubmit={(e)=>{e.preventDefault();const p=parseFloat(nw);if(!isNaN(p)&&p>0){onAddWeightEntry(client.id,p);setNw('');}}} className="flex gap-3">
-                <div className="relative flex-1">
-                  <input type="text" inputMode="decimal" placeholder="78.5" required value={nw} onChange={(e)=>setNw(e.target.value)} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs px-4 py-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#52525b] font-bold">KG</span>
-                </div>
-                <button type="submit" className="bg-[#27272a] text-white hover:text-black hover:bg-[#d4f826] border border-[#3f3f46] text-xs font-bold px-4 rounded-[12px] transition-all flex items-center gap-1">
-                  <Plus className="w-3.5 h-3.5"/>
-                </button>
-              </form>
-            </div>
+            {progressSubTab === 'evolution' && (
+              <div className="space-y-4">
+                <ProgressLineChart user={client} title="Tu Evolución" />
+              </div>
+            )}
 
-            {/* Measurements History Table */}
-            {client.measurementsHistory && client.measurementsHistory.length > 0 && (
+            {progressSubTab === 'history' && (
+            <div className="space-y-4">
+              {/* Quick Weight Entry */}
               <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
-                <h3 className="text-xs uppercase tracking-wider text-white font-bold mb-3 flex items-center gap-2">
-                  <RulerIcon className="w-4 h-4 text-[#00e5ff]"/> Historial de Medidas
+                <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
+                  <Scale className="w-4 h-4 text-[#d4f826]"/> Registrar Peso
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-[10px]">
-                    <thead>
-                      <tr className="text-[#52525b] border-b border-[#27272a]">
-                        <th className="text-left py-2 font-mono uppercase">Fecha</th>
-                        <th className="text-right py-2 font-mono uppercase">Peso</th>
-                        <th className="text-right py-2 font-mono uppercase">% Grasa</th>
-                        <th className="text-right py-2 font-mono uppercase">Cintura</th>
-                        <th className="text-right py-2 font-mono uppercase">Cadera</th>
-                        <th className="text-right py-2 font-mono uppercase">Pierna Izq</th>
-                        <th className="text-right py-2 font-mono uppercase">Pierna Der</th>
-                        <th className="text-right py-2 font-mono uppercase">Bíceps Izq</th>
-                        <th className="text-right py-2 font-mono uppercase">Bíceps Der</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#27272a]">
-                      {client.measurementsHistory.map((m, i) => (
-                        <tr key={i}>
-                          <td className="py-2 text-[#8e8e93]">{m.date}</td>
-                          <td className="py-2 text-right text-white font-bold">{m.weight || '--'} <span className="text-[#52525b] font-normal">kg</span></td>
-                          <td className="py-2 text-right font-bold" style={{ color: m.bodyFat ? getBodyFatColor(m.bodyFat, client.gender || 'male') : '#8e8e93' }}>{m.bodyFat || '--'} <span className="text-[#52525b] font-normal">%</span></td>
-                          <td className="py-2 text-right text-[#00e5ff]">{m.waist || '--'} <span className="text-[#52525b]">cm</span></td>
-                          <td className="py-2 text-right text-[#ff00ff]">{m.hips || '--'} <span className="text-[#52525b]">cm</span></td>
-                          <td className="py-2 text-right text-[#76ff03]">{(m as any).thighsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
-                          <td className="py-2 text-right text-[#00e5ff]">{(m as any).thighsRight || '--'} <span className="text-[#52525b]">cm</span></td>
-                          <td className="py-2 text-right text-[#2979ff]">{m.bicepsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
-                          <td className="py-2 text-right text-[#ff5449]">{m.bicepsRight || '--'} <span className="text-[#52525b]">cm</span></td>
+                <form onSubmit={(e)=>{e.preventDefault();const p=parseFloat(nw);if(!isNaN(p)&&p>0){onAddWeightEntry(client.id,p);setNw('');}}} className="flex gap-3">
+                  <div className="relative flex-1">
+                    <input type="text" inputMode="decimal" placeholder="78.5" required value={nw} onChange={(e)=>setNw(e.target.value)} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs px-4 py-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#52525b] font-bold">KG</span>
+                  </div>
+                  <button type="submit" className="bg-[#27272a] text-white hover:text-black hover:bg-[#d4f826] border border-[#3f3f46] text-xs font-bold px-4 rounded-[12px] transition-all flex items-center gap-1">
+                    <Plus className="w-3.5 h-3.5"/>
+                  </button>
+                </form>
+              </div>
+
+              {/* Measurements History Table */}
+              {client.measurementsHistory && client.measurementsHistory.length > 0 && (
+                <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
+                  <h3 className="text-xs uppercase tracking-wider text-white font-bold mb-3 flex items-center gap-2">
+                    <RulerIcon className="w-4 h-4 text-[#00e5ff]"/> Historial de Medidas
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[10px]">
+                      <thead>
+                        <tr className="text-[#52525b] border-b border-[#27272a]">
+                          <th className="text-left py-2 font-mono uppercase">Fecha</th>
+                          <th className="text-right py-2 font-mono uppercase">Peso</th>
+                          <th className="text-right py-2 font-mono uppercase">% Grasa</th>
+                          <th className="text-right py-2 font-mono uppercase">Cintura</th>
+                          <th className="text-right py-2 font-mono uppercase">Cadera</th>
+                          <th className="text-right py-2 font-mono uppercase">Pierna Izq</th>
+                          <th className="text-right py-2 font-mono uppercase">Pierna Der</th>
+                          <th className="text-right py-2 font-mono uppercase">Bíceps Izq</th>
+                          <th className="text-right py-2 font-mono uppercase">Bíceps Der</th>
+                          <th className="text-right py-2 font-mono uppercase">Por</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-[#27272a]">
+                        {client.measurementsHistory.map((m, i) => (
+                          <tr key={i}>
+                            <td className="py-2 text-[#8e8e93]">{m.date}</td>
+                            <td className="py-2 text-right text-white font-bold">{m.weight || '--'} <span className="text-[#52525b] font-normal">kg</span></td>
+                            <td className="py-2 text-right font-bold" style={{ color: m.bodyFat ? getBodyFatColor(m.bodyFat, client.gender || 'male') : '#8e8e93' }}>{m.bodyFat || '--'} <span className="text-[#52525b] font-normal">%</span></td>
+                            <td className="py-2 text-right text-[#00e5ff]">{m.waist || '--'} <span className="text-[#52525b]">cm</span></td>
+                            <td className="py-2 text-right text-[#ff00ff]">{m.hips || '--'} <span className="text-[#52525b]">cm</span></td>
+                            <td className="py-2 text-right text-[#76ff03]">{(m as any).thighsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
+                            <td className="py-2 text-right text-[#00e5ff]">{(m as any).thighsRight || '--'} <span className="text-[#52525b]">cm</span></td>
+                            <td className="py-2 text-right text-[#2979ff]">{m.bicepsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
+                            <td className="py-2 text-right text-[#ff5449]">{m.bicepsRight || '--'} <span className="text-[#52525b]">cm</span></td>
+                            <td className="py-2 text-right">
+                              <span className={`text-[8px] font-bold px-1 py-0.5 rounded-[4px] ${m.recordedBy === 'client' ? 'bg-[#00e5ff]/10 text-[#00e5ff]' : 'bg-[#d4f826]/10 text-[#d4f826]'}`}>
+                                {m.recordedBy === 'client' ? 'CLI' : 'COA'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Workout History */}
+              {ml.length > 0 && (
+                <WorkoutHistoryChart
+                  data={ml.map(l => ({ date: l.date, duration: l.durationMinutes, feeling: l.feelingScore }))}
+                />
+              )}
+
+              {/* Session List */}
+              <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
+                <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
+                  <Trophy className="w-4 h-4 text-[#d4f826]"/> Sesiones Completadas
+                </h3>
+                <div className="space-y-3">
+                  {ml.length===0?
+                    <p className="text-xs text-[#52525b] p-4 text-center italic">💪 ¡Completa tu primer bloque!</p>
+                    :ml.map(l=>(
+                      <div key={l.id} className="bg-[#1c1c1f] border border-[#27272a] rounded-[12px] p-3 flex justify-between items-center text-xs">
+                        <div>
+                          <span className="text-[9px] text-[#8e8e93] block">{l.date}</span>
+                          <h4 className="text-xs font-bold text-white mt-0.5">{l.routineName}</h4>
+                          <p className="text-[11px] text-[#8e8e93] mt-0.5">{l.durationMinutes} min</p>
+                        </div>
+                        <span className="text-xs bg-[#d4f826]/10 text-[#d4f826] px-2 py-1 rounded font-bold">{l.feelingScore}/5</span>
+                      </div>
+                    ))
+                  }
                 </div>
               </div>
-            )}
-
-            {/* Workout History */}
-            {ml.length > 0 && (
-              <WorkoutHistoryChart
-                data={ml.map(l => ({ date: l.date, duration: l.durationMinutes, feeling: l.feelingScore }))}
-              />
-            )}
-
-            {/* Session List */}
-            <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
-              <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
-                <Trophy className="w-4 h-4 text-[#d4f826]"/> Sesiones Completadas
-              </h3>
-              <div className="space-y-3">
-                {ml.length===0?
-                  <p className="text-xs text-[#52525b] p-4 text-center italic">💪 ¡Completa tu primer bloque!</p>
-                  :ml.map(l=>(
-                    <div key={l.id} className="bg-[#1c1c1f] border border-[#27272a] rounded-[12px] p-3 flex justify-between items-center text-xs">
-                      <div>
-                        <span className="text-[9px] text-[#8e8e93] block">{l.date}</span>
-                        <h4 className="text-xs font-bold text-white mt-0.5">{l.routineName}</h4>
-                        <p className="text-[11px] text-[#8e8e93] mt-0.5">{l.durationMinutes} min</p>
-                      </div>
-                      <span className="text-xs bg-[#d4f826]/10 text-[#d4f826] px-2 py-1 rounded font-bold">{l.feelingScore}/5</span>
-                    </div>
-                  ))
-                }
-              </div>
             </div>
+            )}
           </div>
         )}
         {tab==='c'&&(<div className="bg-[#141416] border border-[#27272a] rounded-[12px] overflow-hidden flex flex-col h-[calc(100dvh-14rem)] md:h-[480px]"><div className="bg-[#1c1c1f] p-4 border-b border-[#27272a] flex items-center justify-between"><div className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#25d366] rounded-full animate-ping"/><span className="text-xs  font-bold text-white uppercase">COACH {coach?.name?.toUpperCase() || 'MARVIN'}</span></div><span className="text-[10px] bg-[#27272a] text-[#8e8e93] px-2 py-0.5 rounded ">24/7</span></div><div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0a0a0c]">{cm.map(m=>{const me=m.senderId===client.id;return(<div key={m.id} className={`flex ${me?'justify-end':'justify-start'}`}><div className={`max-w-xs p-3 rounded-[12px] text-xs ${me?'bg-[#27272a] text-white rounded-tr-none border border-[#3f3f46]':'bg-[#1c1c1f] text-[#e4e2e6] rounded-tl-none border border-[#27272a]'}`}><p className="whitespace-pre-line">{m.content}</p><span className="block text-[8px] text-[#8e8e93] mt-1 text-right ">{new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></div></div>);})}{cm.length===0&&<div className="text-center p-12 text-[#52525b] text-xs italic">Envía un mensaje a tu coach.</div>}</div><div className="p-3 bg-[#1c1c1f] border-t border-[#27272a] flex gap-2"><input type="text" placeholder="Escribe al coach..." value={ci} onChange={(e)=>setCi(e.target.value)} onKeyDown={(e)=>{if(e.key==='Enter') handleSendChat();}} className="flex-1 bg-[#141416] border border-[#27272a] rounded-[8px] text-xs px-4 py-2 text-white focus:outline-none focus:border-[#d4f826]"/><button onClick={handleSendChat} className="bg-[#d4f826] text-black font-bold p-2 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-95"><Send className="w-4 h-4"/></button></div></div>)}
