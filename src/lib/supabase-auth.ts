@@ -49,6 +49,7 @@ const mapRoutineToRoutineDay = (r: Routine, exercises: Exercise[]): RoutineDay =
     restTime: e.rest_time,
     notes: e.notes || undefined,
     imageUrl: e.image_url || undefined,
+    sortOrder: e.sort_order,
   })),
   createdAt: r.created_at.split('T')[0],
 });
@@ -370,6 +371,7 @@ export const exercisesService = {
     if (updates.restTime !== undefined) updateData.rest_time = updates.restTime;
     if (updates.notes !== undefined) updateData.notes = updates.notes || null;
     if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl || null;
+    if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
 
     const { error } = await supabase.from('exercises').update(updateData).eq('id', id);
     if (error) throw error;

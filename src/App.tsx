@@ -276,6 +276,36 @@ export default function App() {
     }
   };
 
+  const handleReorderExercises = async (routineDayId: string, exerciseId: string, direction: 'up' | 'down') => {
+    try {
+      const routine = routines.find(r => r.id === routineDayId);
+      if (!routine) return;
+      const exercises = [...routine.exercises].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+      const idx = exercises.findIndex(e => e.id === exerciseId);
+      if (idx === -1) return;
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= exercises.length) return;
+
+      const current = exercises[idx];
+      const swap = exercises[swapIdx];
+      const currentSort = current.sortOrder || 0;
+      const swapSort = swap.sortOrder || 0;
+
+      await exercisesService.update(current.id, { sortOrder: swapSort });
+      await exercisesService.update(swap.id, { sortOrder: currentSort });
+
+      const clientId = routine.clientId;
+      const updated = await routinesService.getByClient(clientId);
+      if (mountedRef.current) setRoutines(prev => prev.map(r => {
+        const found = updated.find(u => u.id === r.id);
+        return found ? found : r;
+      }));
+    } catch (e: any) {
+      console.error('Error reordering exercises:', e);
+      showError('Error al reordenar ejercicios: ' + (e.message || 'desconocido'));
+    }
+  };
+
   const handleDeleteExercise = async (routineDayId: string, exerciseId: string) => {
     try {
       await exercisesService.delete(exerciseId);
@@ -499,6 +529,7 @@ export default function App() {
               onAddRoutineDay={handleAddRoutineDay}
               onAddExercise={handleAddExercise}
               onUpdateExercise={handleUpdateExercise}
+              onReorderExercises={handleReorderExercises}
               onDeleteExercise={handleDeleteExercise}
               onDeleteClient={handleDeleteClient}
               onUpdateClientPayment={handleUpdateClientPayment}

@@ -4,7 +4,7 @@ import {
   TrendingUp, MessageCircle, Copy, Check, Trash2, Pencil,
   Phone, Shield, BarChart3, Flame, Timer,
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard,
-  User as UserIcon, ClipboardList
+  User as UserIcon, ClipboardList, ChevronDown, ChevronUp, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types/fitness';
@@ -25,6 +25,7 @@ interface CoachDashboardProps {
   onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => void;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
   onUpdateExercise: (routineDayId: string, exerciseId: string, updates: Partial<Exercise>) => void;
+  onReorderExercises: (routineDayId: string, exerciseId: string, direction: 'up' | 'down') => void;
   onDeleteExercise: (routineDayId: string, exerciseId: string) => void;
   onDeleteClient: (clientId: string) => void;
   onUpdateClientPayment: (clientId: string, data: { nextPaymentDate: string; paymentStatus: 'paid' | 'pending' | 'overdue'; monthlyFee: number }) => void;
@@ -47,6 +48,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onAddRoutineDay,
   onAddExercise,
   onUpdateExercise,
+  onReorderExercises,
   onDeleteExercise,
   onDeleteClient,
   onUpdateClientPayment,
@@ -65,6 +67,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [clientPasswords, setClientPasswords] = useState<Record<string, string>>({});
   // Guarda el ID de un cliente recien creado para seleccionarlo cuando aparezca en props.clients
   const [pendingSelectClientId, setPendingSelectClientId] = useState<string | null>(null);
+  // Accordion: solo un día de rutina expandido a la vez
+  const [expandedRoutineId, setExpandedRoutineId] = useState<string | null>(null);
+  // Edición inline de datos personales
+  const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | null>(null);
+  const [editValue, setEditValue] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const setSelectedClientId = (id: string | null) => {
     setSelectedClientIdState(id);
@@ -545,6 +553,20 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     }
   };
 
+  // Guardar edición inline de datos personales
+  const saveEdit = async () => {
+    if (!selectedClient || !editingField) return;
+    setEditSaving(true);
+    try {
+      await onUpdateClient(selectedClient.id, { [editingField]: editValue.trim() });
+      setEditingField(null);
+    } catch (e) {
+      // el error ya se muestra en App.tsx
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   // Generate a new random password for a client
   const handleResetPassword = async (client: User) => {
     const newPassword = Math.random().toString(36).slice(2, 10);
@@ -853,7 +875,35 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-xl font-extrabold text-white">{selectedClient.name}</h2>
+                            {editingField === 'name' ? (
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  disabled={editSaving}
+                                  className="flex-1 min-w-0 bg-[#18181b] border border-[#27272a] rounded-[8px] text-sm font-extrabold text-white px-2.5 py-1 focus:outline-none focus:border-[#d4f826] disabled:opacity-50"
+                                  autoFocus
+                                />
+                                <button onClick={saveEdit} disabled={editSaving} className="text-[#25d366] hover:text-white p-1 rounded-[6px] hover:bg-[#25d366]/20 transition-all">
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button onClick={() => setEditingField(null)} disabled={editSaving} className="text-[#ff5449] hover:text-white p-1 rounded-[6px] hover:bg-[#ff5449]/20 transition-all">
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="group flex items-center gap-1.5">
+                                <h2 className="text-xl font-extrabold text-white">{selectedClient.name}</h2>
+                                <button
+                                  onClick={() => { setEditingField('name'); setEditValue(selectedClient.name); }}
+                                  className="opacity-0 group-hover:opacity-100 text-[#52525b] hover:text-[#d4f826] p-0.5 rounded-[4px] hover:bg-[#d4f826]/10 transition-all"
+                                  title="Editar nombre"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
                             <span className="text-[10px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-2.5 py-1 rounded-full font-bold">
                               Plan Activo
                             </span>
@@ -862,11 +912,68 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                             <span className="text-white font-semibold">Meta:</span> {selectedClient.goal}
                           </p>
                           <div className="flex items-center gap-3 mt-2 flex-wrap">
-                            <p className="text-[11px] text-[#8e8e93] flex items-center gap-1">
-                              <Phone className="w-3 h-3 text-[#3f3f46] shrink-0" /> {selectedClient.phone || 'Sin Teléfono'}
-                            </p>
+                            {editingField === 'phone' ? (
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <Phone className="w-3 h-3 text-[#3f3f46] shrink-0" />
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  disabled={editSaving}
+                                  className="flex-1 min-w-0 bg-[#18181b] border border-[#27272a] rounded-[6px] text-[11px] text-white px-2 py-0.5 focus:outline-none focus:border-[#d4f826] disabled:opacity-50"
+                                  autoFocus
+                                />
+                                <button onClick={saveEdit} disabled={editSaving} className="text-[#25d366] hover:text-white p-0.5 rounded-[4px] hover:bg-[#25d366]/20 transition-all">
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => setEditingField(null)} disabled={editSaving} className="text-[#ff5449] hover:text-white p-0.5 rounded-[4px] hover:bg-[#ff5449]/20 transition-all">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="group flex items-center gap-1">
+                                <p className="text-[11px] text-[#8e8e93] flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-[#3f3f46] shrink-0" /> {selectedClient.phone || 'Sin Teléfono'}
+                                </p>
+                                <button
+                                  onClick={() => { setEditingField('phone'); setEditValue(selectedClient.phone || ''); }}
+                                  className="opacity-0 group-hover:opacity-100 text-[#52525b] hover:text-[#d4f826] p-0.5 rounded-[4px] hover:bg-[#d4f826]/10 transition-all"
+                                  title="Editar teléfono"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
                             <span className="text-[#3f3f46]">·</span>
-                            <p className="text-[11px] text-[#8e8e93] break-all">{selectedClient.email}</p>
+                            {editingField === 'email' ? (
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <input
+                                  type="text"
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  disabled={editSaving}
+                                  className="flex-1 min-w-0 bg-[#18181b] border border-[#27272a] rounded-[6px] text-[11px] text-white px-2 py-0.5 focus:outline-none focus:border-[#d4f826] disabled:opacity-50"
+                                  autoFocus
+                                />
+                                <button onClick={saveEdit} disabled={editSaving} className="text-[#25d366] hover:text-white p-0.5 rounded-[4px] hover:bg-[#25d366]/20 transition-all">
+                                  <Check className="w-3 h-3" />
+                                </button>
+                                <button onClick={() => setEditingField(null)} disabled={editSaving} className="text-[#ff5449] hover:text-white p-0.5 rounded-[4px] hover:bg-[#ff5449]/20 transition-all">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="group flex items-center gap-1">
+                                <p className="text-[11px] text-[#8e8e93] break-all">{selectedClient.email}</p>
+                                <button
+                                  onClick={() => { setEditingField('email'); setEditValue(selectedClient.email); }}
+                                  className="opacity-0 group-hover:opacity-100 text-[#52525b] hover:text-[#d4f826] p-0.5 rounded-[4px] hover:bg-[#d4f826]/10 transition-all"
+                                  title="Editar email"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1087,31 +1194,45 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                     <div className="space-y-5">
                       {clientRoutines.map((routine) => (
                         <div key={routine.id} className="bg-[#141416] border border-[#27272a] rounded-[16px] overflow-hidden">
-                          {/* Routine Header */}
-                          <div className="bg-[#1c1c1f] p-4 border-b border-[#27272a] flex items-center justify-between flex-wrap gap-2">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-sm font-bold text-white">{routine.name}</h4>
-                                {routine.isActive ? (
-                                  <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] px-1.5 py-0.5 rounded-full">ACTIVO</span>
-                                ) : (
-                                  <span className="text-[9px] bg-[#27272a] text-[#8e8e93] px-1.5 py-0.5 rounded-full">RESERVA</span>
-                                )}
-                              </div>
-                              {routine.description && (
-                                <p className="text-xs text-[#8e8e93] mt-0.5">{routine.description}</p>
+                          {/* Routine Header — Clickable Accordion */}
+                          <button
+                            onClick={() => setExpandedRoutineId(prev => prev === routine.id ? null : routine.id)}
+                            className="w-full bg-[#1c1c1f] p-4 border-b border-[#27272a] flex items-center justify-between flex-wrap gap-2 text-left hover:bg-[#242428] transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              {expandedRoutineId === routine.id ? (
+                                <ChevronUp className="w-4 h-4 text-[#d4f826] shrink-0" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-[#52525b] shrink-0" />
                               )}
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-sm font-bold text-white">{routine.name}</h4>
+                                  {routine.isActive ? (
+                                    <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] px-1.5 py-0.5 rounded-full">ACTIVO</span>
+                                  ) : (
+                                    <span className="text-[9px] bg-[#27272a] text-[#8e8e93] px-1.5 py-0.5 rounded-full">RESERVA</span>
+                                  )}
+                                </div>
+                                {routine.description && (
+                                  <p className="text-xs text-[#8e8e93] mt-0.5">{routine.description}</p>
+                                )}
+                                <p className="text-[10px] text-[#52525b] mt-1">
+                                  {routine.exercises.length} ejercicio{routine.exercises.length !== 1 ? 's' : ''}
+                                </p>
+                              </div>
                             </div>
                             <span className="text-[10px] text-[#8e8e93]">Asignado: {routine.createdAt}</span>
-                          </div>
+                          </button>
 
-                          {/* Exercise Cards with Images */}
+                          {/* Exercise Cards with Images — Collapsible */}
+                          {expandedRoutineId === routine.id && (
                           <div className="p-4 space-y-3">
                             {routine.exercises.length === 0 ? (
                               <p className="text-xs text-[#52525b] italic p-2 text-center">No hay ejercicios cargados para este dia.</p>
                             ) : (
                               <div className="grid gap-3">
-                                {routine.exercises.map((ex, idx) => (
+                                {routine.exercises.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).map((ex, idx, arr) => (
                                   <div key={ex.id} className="bg-[#0a0a0c] border border-[#27272a] rounded-[12px] overflow-hidden flex flex-col sm:flex-row">
                                     {/* Exercise Image */}
                                     {ex.imageUrl ? (
@@ -1147,6 +1268,22 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-1 shrink-0">
+                                          <button
+                                            onClick={() => onReorderExercises(routine.id, ex.id, 'up')}
+                                            disabled={idx === 0}
+                                            className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
+                                            title="Mover arriba"
+                                          >
+                                            <ArrowUp className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button
+                                            onClick={() => onReorderExercises(routine.id, ex.id, 'down')}
+                                            disabled={idx === arr.length - 1}
+                                            className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
+                                            title="Mover abajo"
+                                          >
+                                            <ArrowDown className="w-3.5 h-3.5" />
+                                          </button>
                                           <button
                                             onClick={() => openEditExerciseModal(routine.id, ex)}
                                             className="text-[#3f3f46] hover:text-[#d4f826] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
@@ -1427,6 +1564,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                               </button>
                             </div>
                           </div>
+                          )}
                         </div>
                       ))}
 

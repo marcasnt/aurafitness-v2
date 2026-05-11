@@ -62,6 +62,7 @@ export interface Exercise {
   restTime: number; // in seconds
   notes?: string;
   imageUrl?: string; // Imagen o GIF demostrativo del ejercicio
+  sortOrder?: number; // Orden dentro del día de rutina
 }
 
 export interface RoutineDay {
