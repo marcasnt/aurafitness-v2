@@ -3,6 +3,7 @@ import { User, RoutineDay, WorkoutLog, Message, Exercise } from './types/fitness
 import { LoginScreen } from './components/LoginScreen';
 import { CoachDashboard } from './components/CoachDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { supabase } from './lib/supabase';
 import {
   authService,
@@ -420,74 +421,76 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex flex-col justify-between">
-      {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#ff5449] text-white text-xs px-4 py-2 rounded-[12px] animate-in fade-in slide-in-from-top-2 duration-300 max-w-[90vw] break-words">
-          {error}
-        </div>
-      )}
-
-      <div className="flex-1">
-        {!currentUser ? (
-          <LoginScreen onLoginSuccess={handleLoginSuccess} />
-        ) : currentUser.role === 'coach' ? (
-          <CoachDashboard
-            coach={currentUser}
-            clients={clients}
-            routines={routines}
-            messages={messages}
-            unreadMessages={unreadMessages}
-            onAddClient={handleAddClient}
-            onUploadClientAvatar={handleUploadClientAvatar}
-            onAddRoutineDay={handleAddRoutineDay}
-            onAddExercise={handleAddExercise}
-            onUpdateExercise={handleUpdateExercise}
-            onDeleteExercise={handleDeleteExercise}
-            onDeleteClient={handleDeleteClient}
-            onUpdateClientPayment={handleUpdateClientPayment}
-            onMarkPaymentPaid={handleMarkPaymentPaid}
-            onSendMessage={handleSendMessage}
-            onMarkMessagesRead={handleMarkMessagesRead}
-            onUpdateClient={handleUpdateClient}
-            onLogout={handleLogout}
-          />
-        ) : (
-          <ClientDashboard
-            client={currentUser}
-            coach={coachProfile}
-            routines={routines}
-            logs={logs}
-            messages={messages}
-            unreadMessages={unreadMessages}
-            onAddLog={handleAddLog}
-            onSendMessage={handleSendMessage}
-            onMarkMessagesRead={handleMarkMessagesRead}
-            onUpdateClientStreak={async (id, streak) => {
-              try {
-                const updated = await clientsService.update(id, { streak });
-                if (mountedRef.current) setClients(prev => prev.map(c => c.id === id ? updated : c));
-              } catch (e: any) {
-                console.error('Error updating streak:', e);
-                showError('Error actualizando racha');
-              }
-            }}
-            onAddWeightEntry={handleAddWeightEntry}
-            onAddMeasurementsEntry={handleAddMeasurementsEntry}
-            onUpdateClientAvatar={async (id, file) => {
-              try {
-                const url = await storageService.uploadAvatar(id, file);
-                const updated = await clientsService.update(id, { selfieUrl: url, avatar: url });
-                if (mountedRef.current) setClients(prev => prev.map(c => c.id === id ? updated : c));
-                if (currentUser.id === id) setCurrentUser(updated);
-              } catch (e: any) {
-                console.error('Error updating avatar:', e);
-                showError('Error actualizando foto');
-              }
-            }}
-            onLogout={handleLogout}
-          />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex flex-col justify-between">
+        {error && (
+          <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#ff5449] text-white text-xs px-4 py-2 rounded-[12px] animate-in fade-in slide-in-from-top-2 duration-300 max-w-[90vw] break-words">
+            {error}
+          </div>
         )}
+
+        <div className="flex-1">
+          {!currentUser ? (
+            <LoginScreen onLoginSuccess={handleLoginSuccess} />
+          ) : currentUser.role === 'coach' ? (
+            <CoachDashboard
+              coach={currentUser}
+              clients={clients}
+              routines={routines}
+              messages={messages}
+              unreadMessages={unreadMessages}
+              onAddClient={handleAddClient}
+              onUploadClientAvatar={handleUploadClientAvatar}
+              onAddRoutineDay={handleAddRoutineDay}
+              onAddExercise={handleAddExercise}
+              onUpdateExercise={handleUpdateExercise}
+              onDeleteExercise={handleDeleteExercise}
+              onDeleteClient={handleDeleteClient}
+              onUpdateClientPayment={handleUpdateClientPayment}
+              onMarkPaymentPaid={handleMarkPaymentPaid}
+              onSendMessage={handleSendMessage}
+              onMarkMessagesRead={handleMarkMessagesRead}
+              onUpdateClient={handleUpdateClient}
+              onLogout={handleLogout}
+            />
+          ) : (
+            <ClientDashboard
+              client={currentUser}
+              coach={coachProfile}
+              routines={routines}
+              logs={logs}
+              messages={messages}
+              unreadMessages={unreadMessages}
+              onAddLog={handleAddLog}
+              onSendMessage={handleSendMessage}
+              onMarkMessagesRead={handleMarkMessagesRead}
+              onUpdateClientStreak={async (id, streak) => {
+                try {
+                  const updated = await clientsService.update(id, { streak });
+                  if (mountedRef.current) setClients(prev => prev.map(c => c.id === id ? updated : c));
+                } catch (e: any) {
+                  console.error('Error updating streak:', e);
+                  showError('Error actualizando racha');
+                }
+              }}
+              onAddWeightEntry={handleAddWeightEntry}
+              onAddMeasurementsEntry={handleAddMeasurementsEntry}
+              onUpdateClientAvatar={async (id, file) => {
+                try {
+                  const url = await storageService.uploadAvatar(id, file);
+                  const updated = await clientsService.update(id, { selfieUrl: url, avatar: url });
+                  if (mountedRef.current) setClients(prev => prev.map(c => c.id === id ? updated : c));
+                  if (currentUser.id === id) setCurrentUser(updated);
+                } catch (e: any) {
+                  console.error('Error updating avatar:', e);
+                  showError('Error actualizando foto');
+                }
+              }}
+              onLogout={handleLogout}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

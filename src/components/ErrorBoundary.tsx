@@ -1,0 +1,74 @@
+import React, { Component, ReactNode } from 'react';
+
+interface Props {
+  children: ReactNode;
+}
+
+interface State {
+  hasError: boolean;
+  error?: Error;
+}
+
+export class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
+  }
+
+  handleReload = () => {
+    window.location.reload();
+  };
+
+  handleReset = () => {
+    this.setState({ hasError: false, error: undefined });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0a0a0c] text-[#e4e2e6] flex flex-col items-center justify-center p-6">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-8 max-w-md w-full text-center space-y-4">
+            <div className="w-14 h-14 bg-[#ff5449]/10 rounded-full flex items-center justify-center mx-auto">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <h2 className="text-lg font-bold text-white">Algo salió mal</h2>
+            <p className="text-xs text-[#8e8e93]">
+              La app encontró un error inesperado. Puedes intentar recargar o volver atrás.
+            </p>
+            {this.state.error && (
+              <div className="bg-[#0a0a0c] rounded-[8px] p-3 text-left overflow-auto max-h-32">
+                <code className="text-[10px] text-[#ff5449] font-mono break-all">
+                  {this.state.error.message}
+                </code>
+              </div>
+            )}
+            <div className="flex gap-3 justify-center pt-2">
+              <button
+                onClick={this.handleReset}
+                className="bg-[#27272a] text-white text-xs font-semibold px-4 py-2.5 rounded-[8px] hover:bg-[#3f3f46] transition-all"
+              >
+                Intentar de nuevo
+              </button>
+              <button
+                onClick={this.handleReload}
+                className="bg-[#d4f826] text-black text-xs font-semibold px-4 py-2.5 rounded-[8px] hover:bg-[#e2fa52] transition-all"
+              >
+                Recargar página
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}

@@ -56,6 +56,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [selectedClientId, setSelectedClientIdState] = useState<string | null>(clients[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [clientPasswords, setClientPasswords] = useState<Record<string, string>>({});
+  // Guarda el ID de un cliente recien creado para seleccionarlo cuando aparezca en props.clients
+  const [pendingSelectClientId, setPendingSelectClientId] = useState<string | null>(null);
 
   const setSelectedClientId = (id: string | null) => {
     setSelectedClientIdState(id);
@@ -63,6 +65,21 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       onMarkMessagesRead(id);
     }
   };
+
+  // Sincronizar pendingSelectClientId: cuando clients incluya al ID pendiente, seleccionarlo
+  useEffect(() => {
+    if (pendingSelectClientId && clients.some(c => c.id === pendingSelectClientId)) {
+      setSelectedClientId(pendingSelectClientId);
+      setPendingSelectClientId(null);
+    }
+  }, [clients, pendingSelectClientId]);
+
+  // Si selectedClientId apunta a un cliente que ya no existe, resetear a null o al primero
+  useEffect(() => {
+    if (selectedClientId && !clients.some(c => c.id === selectedClientId)) {
+      setSelectedClientIdState(clients[0]?.id || null);
+    }
+  }, [clients, selectedClientId]);
   
   // Modals / Form States
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -269,7 +286,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       const created = await onAddClient(newClient);
       if (created?.id) {
         setClientPasswords(prev => ({ ...prev, [created.id]: newClientPassword }));
-        setSelectedClientId(created.id);
+        // No seleccionar inmediatamente: esperar a que clients se actualice via props
+        setPendingSelectClientId(created.id);
 
         // Si hay foto seleccionada, subirla a Supabase Storage con el ID del cliente creado
         if (newClientSelfieFile) {
