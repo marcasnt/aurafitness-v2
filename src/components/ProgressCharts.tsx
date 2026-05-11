@@ -67,7 +67,7 @@ export function WeightChart({ data }: WeightChartProps) {
 }
 
 interface MeasurementsChartProps {
-  data: { date: string; waist?: number; hips?: number; neck?: number; thighs?: number }[];
+  data: { date: string; waist?: number; hips?: number; neck?: number; thighsLeft?: number; thighsRight?: number }[];
 }
 
 export function BodyMeasurementsChart({ data }: MeasurementsChartProps) {
@@ -88,7 +88,8 @@ export function BodyMeasurementsChart({ data }: MeasurementsChartProps) {
           <Line type="monotone" dataKey="waist" name="Cintura" stroke={COLORS.cyan} strokeWidth={2} dot={{ r: 3, fill: COLORS.cyan, strokeWidth: 0 }} />
           <Line type="monotone" dataKey="hips" name="Cadera" stroke={COLORS.magenta} strokeWidth={2} dot={{ r: 3, fill: COLORS.magenta, strokeWidth: 0 }} />
           <Line type="monotone" dataKey="neck" name="Cuello" stroke={COLORS.orange} strokeWidth={2} dot={{ r: 3, fill: COLORS.orange, strokeWidth: 0 }} />
-          <Line type="monotone" dataKey="thighs" name="Piernas" stroke={COLORS.lightGreen} strokeWidth={2} dot={{ r: 3, fill: COLORS.lightGreen, strokeWidth: 0 }} />
+          <Line type="monotone" dataKey="thighsLeft" name="Pierna Izq." stroke={COLORS.lightGreen} strokeWidth={2} dot={{ r: 3, fill: COLORS.lightGreen, strokeWidth: 0 }} />
+          <Line type="monotone" dataKey="thighsRight" name="Pierna Der." stroke={COLORS.blue} strokeWidth={2} dot={{ r: 3, fill: COLORS.blue, strokeWidth: 0 }} />
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -123,8 +124,8 @@ export function BicepsChart({ data }: BicepsChartProps) {
 }
 
 interface MeasurementCardsProps {
-  latest?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighs?: number; bodyFat?: number };
-  previous?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighs?: number; bodyFat?: number };
+  latest?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighsLeft?: number; thighsRight?: number; bodyFat?: number };
+  previous?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighsLeft?: number; thighsRight?: number; bodyFat?: number };
   gender?: 'male' | 'female';
 }
 
@@ -148,7 +149,8 @@ export function MeasurementCards({ latest, previous, gender }: MeasurementCardsP
     { label: 'Bíceps Izq.', value: latest.bicepsLeft, prev: previous?.bicepsLeft, unit: 'cm', color: 'text-[#2979ff]' },
     { label: 'Bíceps Der.', value: latest.bicepsRight, prev: previous?.bicepsRight, unit: 'cm', color: 'text-[#ff5449]' },
     { label: 'Cuello', value: latest.neck, prev: previous?.neck, unit: 'cm', color: 'text-[#ff9100]' },
-    { label: 'Piernas', value: latest.thighs, prev: previous?.thighs, unit: 'cm', color: 'text-[#76ff03]' },
+    { label: 'Pierna Izq.', value: latest.thighsLeft, prev: previous?.thighsLeft, unit: 'cm', color: 'text-[#76ff03]' },
+    { label: 'Pierna Der.', value: latest.thighsRight, prev: previous?.thighsRight, unit: 'cm', color: 'text-[#00e5ff]' },
   ];
 
   return (

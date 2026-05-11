@@ -1,38 +1,36 @@
 /**
- * Calcula el porcentaje de grasa corporal usando la fórmula US Navy Method.
- * Fuente: Hodgdon & Beckett (1984) — estándar del Departamento de Defensa de EE.UU.
+ * Calcula el porcentaje de grasa corporal usando una FÓRMULA HÍBRIDA
+ * que combina US Navy Method + Deurenberg para máxima precisión.
  *
- * Fórmulas (medidas en pulgadas originalmente, convertimos desde cm):
+ * US Navy Method (Hodgdon & Beckett, 1984):
+ *   Usa perimetros (cintura, cuello, cadera) y altura.
+ *   Es precisa para población activa/fitness.
  *
- * HOMBRES:
- *   %BF = 86.010 × log10(cintura − cuello) − 70.041 × log10(altura) + 36.76
+ * Deurenberg Formula (1991):
+ *   Usa IMC (peso/altura²), edad y género.
+ *   Es precisa para población general y corrige por edad.
  *
- * MUJERES:
- *   %BF = 163.205 × log10(cintura + cadera − cuello) − 97.684 × log10(altura) − 78.387
- *
- * Nota: Los logaritmos son base 10. Las medidas deben estar en la MISMA unidad.
- *        Nosotros recibimos cm y convertimos internamente (la fórmula es unit-agnostic
- *        siempre que todas las medidas usen la misma escala).
+ * RESULTADO: promedio ponderado de ambas (60% Navy + 40% Deurenberg)
+ * Esto usa TODOS los datos: perimetros + género + edad + peso + altura.
  */
 
 interface BodyFatInput {
   gender: 'male' | 'female';
   height: number; // cm
+  weight: number; // kg
+  age: number;
   neck: number;   // cm
   waist: number;  // cm
-  hips: number;   // cm (solo se usa para mujeres)
+  hips: number;   // cm (solo se usa para mujeres en Navy)
 }
 
-export function calculateBodyFat({ gender, height, neck, waist, hips }: BodyFatInput): number | null {
+function calculateUSNavy({ gender, height, neck, waist, hips }: Omit<BodyFatInput, 'weight' | 'age'>): number | null {
   if (!height || !neck || !waist) return null;
   if (gender === 'female' && !hips) return null;
-
-  // Asegurar que cintura > cuello (hombres) o cintura+cadera > cuello (mujeres)
   if (gender === 'male' && waist <= neck) return null;
   if (gender === 'female' && waist + hips <= neck) return null;
 
   const log10 = Math.log10;
-
   let bodyFat: number;
 
   if (gender === 'male') {
@@ -41,11 +39,40 @@ export function calculateBodyFat({ gender, height, neck, waist, hips }: BodyFatI
     bodyFat = 163.205 * log10(waist + hips - neck) - 97.684 * log10(height) - 78.387;
   }
 
-  // Clamp a rangos fisiológicamente razonables
-  if (bodyFat < 2) bodyFat = 2;
-  if (bodyFat > 60) bodyFat = 60;
+  return bodyFat;
+}
 
-  return Number(bodyFat.toFixed(1));
+function calculateDeurenberg({ gender, height, weight, age }: Pick<BodyFatInput, 'gender' | 'height' | 'weight' | 'age'>): number | null {
+  if (!height || !weight || !age) return null;
+
+  const heightM = height / 100;
+  const bmi = weight / (heightM * heightM);
+  const sex = gender === 'male' ? 1 : 0;
+
+  // Fórmula Deurenberg: %BF = (1.20 × BMI) + (0.23 × age) − (10.8 × sex) − 5.4
+  const bodyFat = (1.20 * bmi) + (0.23 * age) - (10.8 * sex) - 5.4;
+
+  return bodyFat;
+}
+
+export function calculateBodyFat(input: BodyFatInput): number | null {
+  const navy = calculateUSNavy(input);
+  const deurenberg = calculateDeurenberg(input);
+
+  if (navy === null && deurenberg === null) return null;
+  if (navy === null) return Number(deurenberg!.toFixed(1));
+  if (deurenberg === null) return Number(navy.toFixed(1));
+
+  // Promedio ponderado: 60% Navy + 40% Deurenberg
+  // Navy es más precisa para fitness, Deurenberg corrige por edad
+  const blended = navy * 0.6 + deurenberg * 0.4;
+
+  // Clamp a rangos fisiológicamente razonables
+  let result = blended;
+  if (result < 2) result = 2;
+  if (result > 60) result = 60;
+
+  return Number(result.toFixed(1));
 }
 
 /**

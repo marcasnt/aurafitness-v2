@@ -9,7 +9,8 @@ export interface BodyMeasurements {
   neck: number; // cm
   waist: number; // cm
   hips: number; // cm
-  thighs: number; // cm
+  thighsLeft: number; // cm
+  thighsRight: number; // cm
   bicepsLeft: number; // cm
   bicepsRight: number; // cm
   height: number; // cm
@@ -31,6 +32,7 @@ export interface User {
   goal?: string;
   phone?: string;
   gender?: 'male' | 'female';
+  age?: number;
   password?: string;
   streak: number;
   adherenceRate: number;

@@ -365,7 +365,8 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                   waist: m.waist || undefined,
                   hips: m.hips || undefined,
                   neck: m.neck || undefined,
-                  thighs: m.thighs || undefined,
+                  thighsLeft: (m as any).thighsLeft || undefined,
+                  thighsRight: (m as any).thighsRight || undefined,
                 }))}
               />
             )}
@@ -412,6 +413,8 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                         <th className="text-right py-2 font-mono uppercase">% Grasa</th>
                         <th className="text-right py-2 font-mono uppercase">Cintura</th>
                         <th className="text-right py-2 font-mono uppercase">Cadera</th>
+                        <th className="text-right py-2 font-mono uppercase">Pierna Izq</th>
+                        <th className="text-right py-2 font-mono uppercase">Pierna Der</th>
                         <th className="text-right py-2 font-mono uppercase">Bíceps Izq</th>
                         <th className="text-right py-2 font-mono uppercase">Bíceps Der</th>
                       </tr>
@@ -424,6 +427,8 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                           <td className="py-2 text-right font-bold" style={{ color: m.bodyFat ? getBodyFatColor(m.bodyFat, client.gender || 'male') : '#8e8e93' }}>{m.bodyFat || '--'} <span className="text-[#52525b] font-normal">%</span></td>
                           <td className="py-2 text-right text-[#00e5ff]">{m.waist || '--'} <span className="text-[#52525b]">cm</span></td>
                           <td className="py-2 text-right text-[#ff00ff]">{m.hips || '--'} <span className="text-[#52525b]">cm</span></td>
+                          <td className="py-2 text-right text-[#76ff03]">{(m as any).thighsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
+                          <td className="py-2 text-right text-[#00e5ff]">{(m as any).thighsRight || '--'} <span className="text-[#52525b]">cm</span></td>
                           <td className="py-2 text-right text-[#2979ff]">{m.bicepsLeft || '--'} <span className="text-[#52525b]">cm</span></td>
                           <td className="py-2 text-right text-[#ff5449]">{m.bicepsRight || '--'} <span className="text-[#52525b]">cm</span></td>
                         </tr>
@@ -473,6 +478,11 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
         onSave={(entry) => onAddMeasurementsEntry(client.id, entry)}
         lastMeasurements={client.measurementsHistory?.[0]}
         clientGender={client.gender}
+        clientAge={client.age}
+        onAgeChange={(age) => {
+          // Client cannot update their own age directly via this modal without onUpdateClient
+          // We leave this empty or pass undefined - the modal will use its internal state
+        }}
       />
 
       {sm&&(<div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"><div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-4 md:p-6 relative">{!ok?(<><div className="text-center mb-4"><div className="inline-flex p-2.5 bg-[#d4f826]/10 text-[#d4f826] rounded-[12px] border border-[#d4f826]/20 mb-2"><Trophy className="w-5 h-5"/></div><h3 className="text-base font-bold  text-white uppercase">Confirmar Bitácora</h3></div><form onSubmit={fin} className="space-y-4"><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Duración (min)</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={dur || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setDur(v === '' ? 0 : Number(v)); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[12px] text-xs p-2.5 text-white "/></div><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Esfuerzo (RPE)</label><select value={feel} onChange={(e)=>setFeel(Number(e.target.value))} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[12px] text-xs p-2.5 text-white "><option value="5">5/5 Máximo</option><option value="4">4/5 Muy bueno</option><option value="3">3/5 Moderado</option><option value="2">2/5 Descarga</option><option value="1">1/5 Liviano</option></select></div><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Comentarios</label><textarea placeholder="Notas para el coach..." value={cmt} onChange={(e)=>setCmt(e.target.value)} rows={3} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs p-2.5 text-white"/></div><div className="flex gap-2 pt-2"><button type="button" onClick={()=>setSm(false)} className="flex-1 text-[#8e8e93] text-xs py-2.5 rounded-[8px] hover:bg-[#242428] transition-all active:scale-[0.98]">Volver</button><button type="submit" className="flex-1 bg-[#d4f826] text-black font-extrabold text-xs py-2.5 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-[0.98] ">ENVIAR</button></div></form></>):(<div className="text-center py-6 space-y-4"><div className="w-14 h-14 bg-[#25d366]/20 text-[#25d366] rounded-full flex items-center justify-center mx-auto border border-[#25d366]/30"><Trophy className="w-7 h-7"/></div><h3 className="text-lg font-bold  text-white uppercase">¡ENTRENAMIENTO SUBIDO!</h3><p className="text-xs text-[#8e8e93]">Reporte enviado al Coach Marvin.</p><button onClick={resetRoutine} className="w-full bg-[#d4f826] text-black font-bold text-xs py-2.5 rounded-[12px] ">VOLVER A RUTINAS</button></div>)}</div></div>)}

@@ -10,7 +10,9 @@ interface MeasurementsModalProps {
   lastMeasurements?: MeasurementsEntry;
   clientName?: string;
   clientGender?: 'male' | 'female';
+  clientAge?: number;
   onGenderChange?: (gender: 'male' | 'female') => void;
+  onAgeChange?: (age: number) => void;
 }
 
 export default function MeasurementsModal({
@@ -20,17 +22,21 @@ export default function MeasurementsModal({
   lastMeasurements,
   clientName,
   clientGender,
+  clientAge,
   onGenderChange,
+  onAgeChange,
 }: MeasurementsModalProps) {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [neck, setNeck] = useState('');
   const [waist, setWaist] = useState('');
   const [hips, setHips] = useState('');
-  const [thighs, setThighs] = useState('');
+  const [thighsLeft, setThighsLeft] = useState('');
+  const [thighsRight, setThighsRight] = useState('');
   const [bicepsLeft, setBicepsLeft] = useState('');
   const [bicepsRight, setBicepsRight] = useState('');
   const [gender, setGender] = useState<'male' | 'female'>(clientGender || 'male');
+  const [age, setAge] = useState(String(clientAge || ''));
 
   useEffect(() => {
     if (isOpen && lastMeasurements) {
@@ -39,24 +45,28 @@ export default function MeasurementsModal({
       setNeck(lastMeasurements.neck ? String(lastMeasurements.neck) : '');
       setWaist(lastMeasurements.waist ? String(lastMeasurements.waist) : '');
       setHips(lastMeasurements.hips ? String(lastMeasurements.hips) : '');
-      setThighs(lastMeasurements.thighs ? String(lastMeasurements.thighs) : '');
+      setThighsLeft((lastMeasurements as any).thighsLeft ? String((lastMeasurements as any).thighsLeft) : '');
+      setThighsRight((lastMeasurements as any).thighsRight ? String((lastMeasurements as any).thighsRight) : '');
       setBicepsLeft(lastMeasurements.bicepsLeft ? String(lastMeasurements.bicepsLeft) : '');
       setBicepsRight(lastMeasurements.bicepsRight ? String(lastMeasurements.bicepsRight) : '');
     } else if (isOpen) {
       setHeight(''); setWeight(''); setNeck(''); setWaist('');
-      setHips(''); setThighs(''); setBicepsLeft(''); setBicepsRight('');
+      setHips(''); setThighsLeft(''); setThighsRight(''); setBicepsLeft(''); setBicepsRight('');
     }
     if (clientGender) setGender(clientGender);
-  }, [isOpen, lastMeasurements, clientGender]);
+    if (clientAge) setAge(String(clientAge));
+  }, [isOpen, lastMeasurements, clientGender, clientAge]);
 
   const bodyFat = useMemo(() => {
     const h = parseFloat(height);
+    const w = parseFloat(weight);
     const n = parseFloat(neck);
-    const w = parseFloat(waist);
+    const wa = parseFloat(waist);
     const hp = parseFloat(hips);
-    if (!h || !n || !w) return null;
-    return calculateBodyFat({ gender, height: h, neck: n, waist: w, hips: hp || 0 });
-  }, [gender, height, neck, waist, hips]);
+    const a = parseInt(age) || 25;
+    if (!h || !n || !wa || !w || !a) return null;
+    return calculateBodyFat({ gender, height: h, weight: w, age: a, neck: n, waist: wa, hips: hp || 0 });
+  }, [gender, height, weight, age, neck, waist, hips]);
 
   const bodyFatCategory = bodyFat ? getBodyFatCategory(gender, bodyFat) : null;
   const bodyFatColor = bodyFat ? getBodyFatColor(bodyFat, gender) : '#8e8e93';
@@ -72,7 +82,8 @@ export default function MeasurementsModal({
       neck: parseFloat(neck) || 0,
       waist: parseFloat(waist) || 0,
       hips: parseFloat(hips) || 0,
-      thighs: parseFloat(thighs) || 0,
+      thighsLeft: parseFloat(thighsLeft) || 0,
+      thighsRight: parseFloat(thighsRight) || 0,
       bicepsLeft: parseFloat(bicepsLeft) || 0,
       bicepsRight: parseFloat(bicepsRight) || 0,
       bodyFat: bodyFat ?? undefined,
@@ -100,31 +111,42 @@ export default function MeasurementsModal({
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Gender selector (only if not already set or if coach is editing) */}
+          {/* Gender selector */}
           <div>
             <label className={labelClass}>Género (para cálculo de % grasa)</label>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setGender('male');
-                  onGenderChange?.('male');
-                }}
+                onClick={() => { setGender('male'); onGenderChange?.('male'); }}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gender === 'male' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
               >
                 Hombre
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setGender('female');
-                  onGenderChange?.('female');
-                }}
+                onClick={() => { setGender('female'); onGenderChange?.('female'); }}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gender === 'female' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
               >
                 Mujer
               </button>
             </div>
+          </div>
+
+          {/* Age */}
+          <div>
+            <label className={labelClass}>Edad (años)</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="28"
+              value={age}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^0-9]/g, '');
+                setAge(v);
+                if (v) onAgeChange?.(parseInt(v));
+              }}
+              className={inputClass}
+            />
           </div>
 
           <div className="flex items-center gap-2 mb-2">
@@ -154,8 +176,12 @@ export default function MeasurementsModal({
               <input type="text" inputMode="numeric" placeholder="98" value={hips} onChange={(e) => setHips(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Piernas (cm)</label>
-              <input type="text" inputMode="numeric" placeholder="58" value={thighs} onChange={(e) => setThighs(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+              <label className={labelClass}>Pierna Izq. (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="58" value={thighsLeft} onChange={(e) => setThighsLeft(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Pierna Der. (cm)</label>
+              <input type="text" inputMode="numeric" placeholder="58.5" value={thighsRight} onChange={(e) => setThighsRight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Bíceps Izq. (cm)</label>
@@ -177,8 +203,8 @@ export default function MeasurementsModal({
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-[8px] text-[#52525b]">Fórmula US Navy</p>
-                <p className="text-[8px] text-[#52525b]">Altura · Cuello · Cintura</p>
+                <p className="text-[8px] text-[#52525b]">Fórmula Híbrida</p>
+                <p className="text-[8px] text-[#52525b]">Navy + Deurenberg</p>
               </div>
             </div>
           )}

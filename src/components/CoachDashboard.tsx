@@ -79,10 +79,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [newClientNeck, setNewClientNeck] = useState('');
   const [newClientWaist, setNewClientWaist] = useState('');
   const [newClientHips, setNewClientHips] = useState('');
-  const [newClientThighs, setNewClientThighs] = useState('');
+  const [newClientThighsLeft, setNewClientThighsLeft] = useState('');
+  const [newClientThighsRight, setNewClientThighsRight] = useState('');
   const [newClientBicepsLeft, setNewClientBicepsLeft] = useState('');
   const [newClientBicepsRight, setNewClientBicepsRight] = useState('');
   const [newClientGender, setNewClientGender] = useState<'male' | 'female'>('male');
+  const [newClientAge, setNewClientAge] = useState('');
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -214,10 +216,13 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     const neckVal = parseFloat(newClientNeck) || 0;
     const waistVal = parseFloat(newClientWaist) || 0;
     const hipsVal = parseFloat(newClientHips) || 0;
+    const ageVal = parseInt(newClientAge) || 25;
 
     const bodyFat = calculateBodyFat({
       gender: newClientGender,
       height: heightVal,
+      weight: weightVal,
+      age: ageVal,
       neck: neckVal,
       waist: waistVal,
       hips: hipsVal,
@@ -230,7 +235,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       neck: neckVal,
       waist: waistVal,
       hips: hipsVal,
-      thighs: parseFloat(newClientThighs) || 0,
+      thighsLeft: parseFloat(newClientThighsLeft) || 0,
+      thighsRight: parseFloat(newClientThighsRight) || 0,
       bicepsLeft: parseFloat(newClientBicepsLeft) || 0,
       bicepsRight: parseFloat(newClientBicepsRight) || 0,
       bodyFat: bodyFat ?? undefined,
@@ -244,6 +250,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       goal: newClientGoal || 'Hipertrofia General',
       phone: newClientPhone || '',
       gender: newClientGender,
+      age: ageVal,
       streak: 0,
       avatar: newClientSelfiePreview || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200`,
       selfieUrl: newClientSelfiePreview || '',
@@ -1436,6 +1443,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Edad (años)</label>
+                    <input type="text" inputMode="numeric" placeholder="28" value={newClientAge} onChange={(e) => setNewClientAge(e.target.value.replace(/[^0-9]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
                     <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Altura (cm)</label>
                     <input type="text" inputMode="numeric" placeholder="175" value={newClientHeight} onChange={(e) => setNewClientHeight(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
                   </div>
@@ -1456,8 +1467,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                     <input type="text" inputMode="numeric" placeholder="98" value={newClientHips} onChange={(e) => setNewClientHips(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
                   </div>
                   <div>
-                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Piernas</label>
-                    <input type="text" inputMode="numeric" placeholder="58" value={newClientThighs} onChange={(e) => setNewClientThighs(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Pierna Izq.</label>
+                    <input type="text" inputMode="numeric" placeholder="58" value={newClientThighsLeft} onChange={(e) => setNewClientThighsLeft(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Pierna Der.</label>
+                    <input type="text" inputMode="numeric" placeholder="58.5" value={newClientThighsRight} onChange={(e) => setNewClientThighsRight(e.target.value.replace(/[^0-9.]/g, ''))} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826] font-mono" />
                   </div>
                   <div>
                     <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Bíceps Izq.</label>
@@ -1830,6 +1845,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         onGenderChange={(g) => {
           if (measurementsClientId) {
             onUpdateClient(measurementsClientId, { gender: g });
+          }
+        }}
+        clientAge={clients.find(c => c.id === measurementsClientId)?.age}
+        onAgeChange={(a) => {
+          if (measurementsClientId) {
+            onUpdateClient(measurementsClientId, { age: a });
           }
         }}
       />
