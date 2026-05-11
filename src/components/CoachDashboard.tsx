@@ -9,6 +9,7 @@ import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types
 import { clientsService, exercisesService, storageService } from '../lib/supabase-auth';
 import MeasurementsModal from './MeasurementsModal';
 import { MeasurementCards, WeightChart, BodyMeasurementsChart, BicepsChart } from './ProgressCharts';
+import { calculateBodyFat } from '../lib/bodyFatCalculator';
 
 interface CoachDashboardProps {
   coach: User;
@@ -81,6 +82,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [newClientThighs, setNewClientThighs] = useState('');
   const [newClientBicepsLeft, setNewClientBicepsLeft] = useState('');
   const [newClientBicepsRight, setNewClientBicepsRight] = useState('');
+  const [newClientGender, setNewClientGender] = useState<'male' | 'female'>('male');
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -208,16 +210,30 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     const today = new Date().toISOString().split('T')[0];
     const weightVal = parseFloat(newClientWeight) || 75;
 
+    const heightVal = parseFloat(newClientHeight) || 0;
+    const neckVal = parseFloat(newClientNeck) || 0;
+    const waistVal = parseFloat(newClientWaist) || 0;
+    const hipsVal = parseFloat(newClientHips) || 0;
+
+    const bodyFat = calculateBodyFat({
+      gender: newClientGender,
+      height: heightVal,
+      neck: neckVal,
+      waist: waistVal,
+      hips: hipsVal,
+    });
+
     const initialMeasurements = {
       date: today,
-      height: parseFloat(newClientHeight) || 0,
+      height: heightVal,
       weight: weightVal,
-      neck: parseFloat(newClientNeck) || 0,
-      waist: parseFloat(newClientWaist) || 0,
-      hips: parseFloat(newClientHips) || 0,
+      neck: neckVal,
+      waist: waistVal,
+      hips: hipsVal,
       thighs: parseFloat(newClientThighs) || 0,
       bicepsLeft: parseFloat(newClientBicepsLeft) || 0,
       bicepsRight: parseFloat(newClientBicepsRight) || 0,
+      bodyFat: bodyFat ?? undefined,
     };
 
     const newClient = {
@@ -227,6 +243,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       role: 'client' as const,
       goal: newClientGoal || 'Hipertrofia General',
       phone: newClientPhone || '',
+      gender: newClientGender,
       streak: 0,
       avatar: newClientSelfiePreview || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200`,
       selfieUrl: newClientSelfiePreview || '',
@@ -1155,6 +1172,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                     <MeasurementCards
                       latest={selectedClient.measurementsHistory?.[0]}
                       previous={selectedClient.measurementsHistory?.[1]}
+                      gender={selectedClient.gender}
                     />
 
                     {selectedClient.weightHistory && selectedClient.weightHistory.length > 1 && (
@@ -1397,6 +1415,25 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
               <div className="border-t border-[#27272a] pt-3 mt-1">
                 <label className="block text-[10px] text-[#a1a1aa] mb-2 font-mono uppercase font-semibold tracking-wider">Medidas Corporales Iniciales (cm)</label>
+                <div className="mb-2.5">
+                  <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Género (para cálculo de % grasa)</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewClientGender('male')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${newClientGender === 'male' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
+                    >
+                      Hombre
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewClientGender('female')}
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${newClientGender === 'female' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
+                    >
+                      Mujer
+                    </button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div>
                     <label className="block text-[9px] text-[#52525b] mb-0.5 font-mono uppercase">Altura (cm)</label>
@@ -1789,6 +1826,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         }}
         lastMeasurements={clients.find(c => c.id === measurementsClientId)?.measurementsHistory?.[0]}
         clientName={clients.find(c => c.id === measurementsClientId)?.name}
+        clientGender={clients.find(c => c.id === measurementsClientId)?.gender}
+        onGenderChange={(g) => {
+          if (measurementsClientId) {
+            onUpdateClient(measurementsClientId, { gender: g });
+          }
+        }}
       />
     </div>
   );

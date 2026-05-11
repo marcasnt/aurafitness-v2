@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Ruler } from 'lucide-react';
 import { MeasurementsEntry } from '../types/fitness';
+import { calculateBodyFat, getBodyFatCategory, getBodyFatColor } from '../lib/bodyFatCalculator';
 
 interface MeasurementsModalProps {
   isOpen: boolean;
@@ -8,9 +9,19 @@ interface MeasurementsModalProps {
   onSave: (entry: MeasurementsEntry) => void;
   lastMeasurements?: MeasurementsEntry;
   clientName?: string;
+  clientGender?: 'male' | 'female';
+  onGenderChange?: (gender: 'male' | 'female') => void;
 }
 
-export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasurements, clientName }: MeasurementsModalProps) {
+export default function MeasurementsModal({
+  isOpen,
+  onClose,
+  onSave,
+  lastMeasurements,
+  clientName,
+  clientGender,
+  onGenderChange,
+}: MeasurementsModalProps) {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [neck, setNeck] = useState('');
@@ -19,6 +30,7 @@ export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasure
   const [thighs, setThighs] = useState('');
   const [bicepsLeft, setBicepsLeft] = useState('');
   const [bicepsRight, setBicepsRight] = useState('');
+  const [gender, setGender] = useState<'male' | 'female'>(clientGender || 'male');
 
   useEffect(() => {
     if (isOpen && lastMeasurements) {
@@ -34,7 +46,20 @@ export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasure
       setHeight(''); setWeight(''); setNeck(''); setWaist('');
       setHips(''); setThighs(''); setBicepsLeft(''); setBicepsRight('');
     }
-  }, [isOpen, lastMeasurements]);
+    if (clientGender) setGender(clientGender);
+  }, [isOpen, lastMeasurements, clientGender]);
+
+  const bodyFat = useMemo(() => {
+    const h = parseFloat(height);
+    const n = parseFloat(neck);
+    const w = parseFloat(waist);
+    const hp = parseFloat(hips);
+    if (!h || !n || !w) return null;
+    return calculateBodyFat({ gender, height: h, neck: n, waist: w, hips: hp || 0 });
+  }, [gender, height, neck, waist, hips]);
+
+  const bodyFatCategory = bodyFat ? getBodyFatCategory(gender, bodyFat) : null;
+  const bodyFatColor = bodyFat ? getBodyFatColor(bodyFat, gender) : '#8e8e93';
 
   if (!isOpen) return null;
 
@@ -50,6 +75,7 @@ export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasure
       thighs: parseFloat(thighs) || 0,
       bicepsLeft: parseFloat(bicepsLeft) || 0,
       bicepsRight: parseFloat(bicepsRight) || 0,
+      bodyFat: bodyFat ?? undefined,
     };
     onSave(entry);
     onClose();
@@ -74,6 +100,33 @@ export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasure
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Gender selector (only if not already set or if coach is editing) */}
+          <div>
+            <label className={labelClass}>Género (para cálculo de % grasa)</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setGender('male');
+                  onGenderChange?.('male');
+                }}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gender === 'male' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
+              >
+                Hombre
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setGender('female');
+                  onGenderChange?.('female');
+                }}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gender === 'female' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
+              >
+                Mujer
+              </button>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 mb-2">
             <Ruler className="w-4 h-4 text-[#d4f826]" />
             <span className="text-[10px] text-[#a1a1aa] font-mono uppercase tracking-wider">Datos Corporales</span>
@@ -113,6 +166,22 @@ export default function MeasurementsModal({ isOpen, onClose, onSave, lastMeasure
               <input type="text" inputMode="numeric" placeholder="35.5" value={bicepsRight} onChange={(e) => setBicepsRight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
             </div>
           </div>
+
+          {/* Body Fat Preview */}
+          {bodyFat !== null && (
+            <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <p className="text-[9px] text-[#52525b] font-mono uppercase tracking-wider">% Grasa Corporal (aprox.)</p>
+                <p className="text-lg font-bold mt-0.5" style={{ color: bodyFatColor }}>
+                  {bodyFat}% <span className="text-[10px] text-[#8e8e93] font-normal">— {bodyFatCategory}</span>
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] text-[#52525b]">Fórmula US Navy</p>
+                <p className="text-[8px] text-[#52525b]">Altura · Cuello · Cintura</p>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-3">
             <button type="button" onClick={onClose} className="bg-transparent hover:bg-[#18181b] text-[#a1a1aa] text-xs font-semibold py-2 px-4 rounded-xl transition-all">

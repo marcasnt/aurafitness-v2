@@ -18,6 +18,7 @@ export interface BodyMeasurements {
 
 export interface MeasurementsEntry extends BodyMeasurements {
   date: string; // YYYY-MM-DD
+  bodyFat?: number; // % calculado automáticamente
 }
 
 export interface User {
@@ -29,6 +30,7 @@ export interface User {
   selfieUrl?: string;
   goal?: string;
   phone?: string;
+  gender?: 'male' | 'female';
   password?: string;
   streak: number;
   adherenceRate: number;

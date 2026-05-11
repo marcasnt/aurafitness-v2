@@ -18,6 +18,7 @@ const mapProfileToUser = (p: Profile): User => ({
   selfieUrl: p.avatar_url || undefined,
   goal: p.goal || undefined,
   phone: p.phone || undefined,
+  gender: p.gender as 'male' | 'female' | undefined,
   streak: p.streak,
   adherenceRate: p.adherence_rate,
   monthlyFee: p.monthly_fee,
@@ -142,6 +143,7 @@ export const clientsService = {
         avatar_url: client.selfieUrl || client.avatar || null,
         goal: client.goal || null,
         phone: client.phone || null,
+        gender: client.gender || null,
         streak: 0,
         adherence_rate: 100,
         monthly_fee: client.monthlyFee || 0,
@@ -164,6 +166,7 @@ export const clientsService = {
     if (updates.email !== undefined) updateData.email = updates.email;
     if (updates.goal !== undefined) updateData.goal = updates.goal;
     if (updates.phone !== undefined) updateData.phone = updates.phone;
+    if (updates.gender !== undefined) updateData.gender = updates.gender;
     if (updates.streak !== undefined) updateData.streak = updates.streak;
     if (updates.avatar !== undefined || updates.selfieUrl !== undefined) {
       updateData.avatar_url = updates.selfieUrl || updates.avatar || null;

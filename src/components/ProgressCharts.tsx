@@ -2,6 +2,7 @@ import React from 'react';
 import {
   AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
+import { getBodyFatColor, getBodyFatCategory } from '../lib/bodyFatCalculator';
 
 // Material Dark Athletic theme colors
 const COLORS = {
@@ -122,11 +123,12 @@ export function BicepsChart({ data }: BicepsChartProps) {
 }
 
 interface MeasurementCardsProps {
-  latest?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighs?: number };
-  previous?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighs?: number };
+  latest?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighs?: number; bodyFat?: number };
+  previous?: { weight?: number; waist?: number; hips?: number; bicepsLeft?: number; bicepsRight?: number; height?: number; neck?: number; thighs?: number; bodyFat?: number };
+  gender?: 'male' | 'female';
 }
 
-export function MeasurementCards({ latest, previous }: MeasurementCardsProps) {
+export function MeasurementCards({ latest, previous, gender }: MeasurementCardsProps) {
   if (!latest) return null;
 
   const diff = (curr?: number, prev?: number) => {
@@ -140,13 +142,13 @@ export function MeasurementCards({ latest, previous }: MeasurementCardsProps) {
 
   const items = [
     { label: 'Peso', value: latest.weight, prev: previous?.weight, unit: 'kg', color: 'text-[#d4f826]' },
+    { label: '% Grasa', value: latest.bodyFat, prev: previous?.bodyFat, unit: '%', color: gender && latest.bodyFat ? `text-[${getBodyFatColor(latest.bodyFat, gender)}]` : 'text-[#e4e2e6]', isBodyFat: true },
     { label: 'Cintura', value: latest.waist, prev: previous?.waist, unit: 'cm', color: 'text-[#00e5ff]' },
     { label: 'Cadera', value: latest.hips, prev: previous?.hips, unit: 'cm', color: 'text-[#ff00ff]' },
     { label: 'Bíceps Izq.', value: latest.bicepsLeft, prev: previous?.bicepsLeft, unit: 'cm', color: 'text-[#2979ff]' },
     { label: 'Bíceps Der.', value: latest.bicepsRight, prev: previous?.bicepsRight, unit: 'cm', color: 'text-[#ff5449]' },
     { label: 'Cuello', value: latest.neck, prev: previous?.neck, unit: 'cm', color: 'text-[#ff9100]' },
     { label: 'Piernas', value: latest.thighs, prev: previous?.thighs, unit: 'cm', color: 'text-[#76ff03]' },
-    { label: 'Altura', value: latest.height, prev: previous?.height, unit: 'cm', color: 'text-[#e4e2e6]' },
   ];
 
   return (
