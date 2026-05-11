@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Scale, Plus, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon } from 'lucide-react';
+import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
 import MeasurementsModal from './MeasurementsModal';
@@ -38,7 +38,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   // Completion modal
   const [sm, setSm] = useState(false); const [dur, setDur] = useState(60); const [feel, setFeel] = useState(5);
   const [cmt, setCmt] = useState(''); const [ok, setOk] = useState(false);
-  const [nw, setNw] = useState(''); const [ci, setCi] = useState('');
+  const [ci, setCi] = useState('');
   const [fi, setFi] = useState<string|null>(null);
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
 
@@ -389,22 +389,6 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
 
             {progressSubTab === 'history' && (
             <div className="space-y-4">
-              {/* Quick Weight Entry */}
-              <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
-                <h3 className="text-xs uppercase tracking-wider text-white font-bold flex items-center gap-2 mb-3">
-                  <Scale className="w-4 h-4 text-[#d4f826]"/> Registrar Peso
-                </h3>
-                <form onSubmit={(e)=>{e.preventDefault();const p=parseFloat(nw);if(!isNaN(p)&&p>0){onAddWeightEntry(client.id,p);setNw('');}}} className="flex gap-3">
-                  <div className="relative flex-1">
-                    <input type="text" inputMode="decimal" placeholder="78.5" required value={nw} onChange={(e)=>setNw(e.target.value)} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs px-4 py-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#52525b] font-bold">KG</span>
-                  </div>
-                  <button type="submit" className="bg-[#27272a] text-white hover:text-black hover:bg-[#d4f826] border border-[#3f3f46] text-xs font-bold px-4 rounded-[12px] transition-all flex items-center gap-1">
-                    <Plus className="w-3.5 h-3.5"/>
-                  </button>
-                </form>
-              </div>
-
               {/* Measurements History Table */}
               {client.measurementsHistory && client.measurementsHistory.length > 0 && (
                 <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">

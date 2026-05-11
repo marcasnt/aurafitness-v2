@@ -20,7 +20,7 @@ interface CoachDashboardProps {
   routines: RoutineDay[];
   messages: Message[];
   unreadMessages?: number;
-  onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string }) => Promise<User | undefined>;
+  onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: MeasurementsEntry; firstPaymentDate?: string }) => Promise<User | undefined>;
   onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => void;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
   onUpdateExercise: (routineDayId: string, exerciseId: string, updates: Partial<Exercise>) => void;
@@ -167,6 +167,13 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
   const [measurementsClientId, setMeasurementsClientId] = useState<string | null>(null);
 
+  // Payment edit state
+  const [editingPaymentIndex, setEditingPaymentIndex] = useState<number | null>(null);
+  const [editPaymentDate, setEditPaymentDate] = useState('');
+  const [editPaymentAmount, setEditPaymentAmount] = useState('');
+  const [editPaymentStatus, setEditPaymentStatus] = useState<'paid' | 'pending' | 'overdue'>('paid');
+  const [editPaymentMethod, setEditPaymentMethod] = useState('');
+
   // Chat message active text
   const [chatInput, setChatInput] = useState('');
 
@@ -286,6 +293,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       monthlyFee: newClientFee,
       weightHistory: [{ date: today, weight: weightVal }],
       initialMeasurements,
+      firstPaymentDate: newClientPaymentDate || '',
     };
 
     try {
@@ -499,6 +507,53 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     } catch (e: any) {
       alert('Error al regenerar contraseña: ' + (e.message || 'desconocido'));
     }
+  };
+
+  // Payment editing handlers
+  const openEditPayment = (index: number) => {
+    if (!selectedClient) return;
+    const entry = selectedClient.paymentHistory?.[index];
+    if (!entry) return;
+    setEditingPaymentIndex(index);
+    setEditPaymentDate(entry.date);
+    setEditPaymentAmount(entry.amount.toString());
+    setEditPaymentStatus(entry.status);
+    setEditPaymentMethod(entry.method || '');
+  };
+
+  const savePaymentEdit = () => {
+    if (!selectedClient || editingPaymentIndex === null) return;
+    const updatedHistory = [...(selectedClient.paymentHistory || [])];
+    updatedHistory[editingPaymentIndex] = {
+      date: editPaymentDate,
+      amount: parseFloat(editPaymentAmount) || 0,
+      status: editPaymentStatus,
+      method: editPaymentMethod || 'Manual',
+    };
+    onUpdateClient(selectedClient.id, { paymentHistory: updatedHistory });
+    setEditingPaymentIndex(null);
+  };
+
+  const deletePaymentEntry = (index: number) => {
+    if (!selectedClient) return;
+    if (!window.confirm('¿Eliminar este registro de pago?')) return;
+    const updatedHistory = [...(selectedClient.paymentHistory || [])];
+    updatedHistory.splice(index, 1);
+    onUpdateClient(selectedClient.id, { paymentHistory: updatedHistory });
+    if (editingPaymentIndex === index) setEditingPaymentIndex(null);
+  };
+
+  const addPaymentEntry = () => {
+    if (!selectedClient) return;
+    const today = new Date().toISOString().split('T')[0];
+    const newEntry = {
+      date: today,
+      amount: selectedClient.monthlyFee,
+      status: 'paid' as const,
+      method: 'Manual',
+    };
+    const updatedHistory = [newEntry, ...(selectedClient.paymentHistory || [])];
+    onUpdateClient(selectedClient.id, { paymentHistory: updatedHistory });
   };
 
   // Send message from Coach
@@ -836,21 +891,75 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         </button>
                       </div>
                       {/* Payment history full table */}
-                      {selectedClient.paymentHistory && selectedClient.paymentHistory.length > 0 && (
-                        <div className="border-t border-[#27272a] pt-2">
-                          <p className="text-[9px] text-[#71717a] uppercase font-mono font-bold mb-2">Historial Completo de Pagos</p>
-                          <div className="max-h-40 overflow-y-auto">
-                            <table className="w-full text-[10px]">
-                              <thead>
-                                <tr className="text-[#52525b] border-b border-[#27272a]">
-                                  <th className="text-left py-1.5 font-mono uppercase">Fecha</th>
-                                  <th className="text-right py-1.5 font-mono uppercase">Monto</th>
-                                  <th className="text-right py-1.5 font-mono uppercase">Estado</th>
-                                  <th className="text-right py-1.5 font-mono uppercase">Metodo</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-[#27272a]">
-                                {selectedClient.paymentHistory.map((ph, i) => (
+                      <div className="border-t border-[#27272a] pt-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[9px] text-[#71717a] uppercase font-mono font-bold">Historial Completo de Pagos</p>
+                          <button
+                            onClick={addPaymentEntry}
+                            className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-2 py-1 rounded-[4px] font-bold hover:bg-[#d4f826]/20 transition-all"
+                          >
+                            + AGREGAR
+                          </button>
+                        </div>
+                        <div className="max-h-48 overflow-y-auto">
+                          <table className="w-full text-[10px]">
+                            <thead>
+                              <tr className="text-[#52525b] border-b border-[#27272a]">
+                                <th className="text-left py-1.5 font-mono uppercase">Fecha</th>
+                                <th className="text-right py-1.5 font-mono uppercase">Monto</th>
+                                <th className="text-right py-1.5 font-mono uppercase">Estado</th>
+                                <th className="text-right py-1.5 font-mono uppercase">Metodo</th>
+                                <th className="text-right py-1.5 font-mono uppercase"></th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#27272a]">
+                              {selectedClient.paymentHistory?.map((ph, i) => (
+                                editingPaymentIndex === i ? (
+                                  <tr key={i} className="bg-[#1c1c1f]">
+                                    <td className="py-1">
+                                      <input
+                                        type="date"
+                                        value={editPaymentDate}
+                                        onChange={(e) => setEditPaymentDate(e.target.value)}
+                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white"
+                                      />
+                                    </td>
+                                    <td className="py-1">
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        value={editPaymentAmount}
+                                        onChange={(e) => setEditPaymentAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white text-right"
+                                      />
+                                    </td>
+                                    <td className="py-1">
+                                      <select
+                                        value={editPaymentStatus}
+                                        onChange={(e) => setEditPaymentStatus(e.target.value as any)}
+                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white"
+                                      >
+                                        <option value="paid">PAGADO</option>
+                                        <option value="pending">PENDIENTE</option>
+                                        <option value="overdue">VENCIDO</option>
+                                      </select>
+                                    </td>
+                                    <td className="py-1">
+                                      <input
+                                        type="text"
+                                        value={editPaymentMethod}
+                                        onChange={(e) => setEditPaymentMethod(e.target.value)}
+                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white"
+                                      />
+                                    </td>
+                                    <td className="py-1">
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <button onClick={savePaymentEdit} className="text-[#25d366] hover:text-white p-0.5 rounded-[4px] hover:bg-[#25d366]/20 transition-all"><Check className="w-3 h-3"/></button>
+                                        <button onClick={() => setEditingPaymentIndex(null)} className="text-[#ff5449] hover:text-white p-0.5 rounded-[4px] hover:bg-[#ff5449]/20 transition-all"><X className="w-3 h-3"/></button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : (
                                   <tr key={i}>
                                     <td className="py-1.5 text-[#a1a1aa] font-mono">{ph.date}</td>
                                     <td className="py-1.5 text-right text-white font-bold">€{ph.amount}</td>
@@ -860,13 +969,24 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                       </span>
                                     </td>
                                     <td className="py-1.5 text-right text-[#8e8e93]">{ph.method || '--'}</td>
+                                    <td className="py-1.5">
+                                      <div className="flex items-center gap-1 justify-end">
+                                        <button onClick={() => openEditPayment(i)} className="text-[#3f3f46] hover:text-[#d4f826] p-0.5 rounded-[4px] hover:bg-[#d4f826]/10 transition-all"><Pencil className="w-3 h-3"/></button>
+                                        <button onClick={() => deletePaymentEntry(i)} className="text-[#3f3f46] hover:text-[#ff5449] p-0.5 rounded-[4px] hover:bg-[#ff5449]/10 transition-all"><Trash2 className="w-3 h-3"/></button>
+                                      </div>
+                                    </td>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                )
+                              ))}
+                              {(!selectedClient.paymentHistory || selectedClient.paymentHistory.length === 0) && (
+                                <tr>
+                                  <td colSpan={5} className="py-2 text-center text-[#52525b] text-[10px]">Sin registros de pago.</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
-                      )}
+                      </div>
                     </div>
                     </div>
                   </div>

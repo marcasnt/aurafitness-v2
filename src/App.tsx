@@ -5,6 +5,7 @@ import { CoachDashboard } from './components/CoachDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { supabase } from './lib/supabase';
+import { getAutoPaymentStatus } from './lib/dateHelpers';
 import {
   authService,
   clientsService,
@@ -168,6 +169,30 @@ export default function App() {
     return () => clearInterval(interval);
   }, [currentUser, loadMessages]);
 
+  // Auto-detección de estados de pago: ejecuta al cargar y cada 60 segundos
+  const autoUpdatePaymentStatuses = useCallback(async () => {
+    if (currentUser?.role !== 'coach') return;
+    for (const client of clients) {
+      const computed = getAutoPaymentStatus(client.nextPaymentDate);
+      if (computed !== client.paymentStatus) {
+        try {
+          const updated = await clientsService.update(client.id, { paymentStatus: computed });
+          if (mountedRef.current) {
+            setClients(prev => prev.map(c => c.id === client.id ? updated : c));
+          }
+        } catch (e: any) {
+          console.error('Auto payment status error for', client.id, e);
+        }
+      }
+    }
+  }, [currentUser, clients]);
+
+  useEffect(() => {
+    autoUpdatePaymentStatuses();
+    const interval = setInterval(autoUpdatePaymentStatuses, 60000);
+    return () => clearInterval(interval);
+  }, [autoUpdatePaymentStatuses]);
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
   };
@@ -182,7 +207,7 @@ export default function App() {
     setCoachProfile(null);
   };
 
-  const handleAddClient = async (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: import('./types/fitness').MeasurementsEntry }): Promise<User | undefined> => {
+  const handleAddClient = async (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: import('./types/fitness').MeasurementsEntry; firstPaymentDate?: string }): Promise<User | undefined> => {
     try {
       const created = await clientsService.create(newClient);
       if (mountedRef.current) setClients(prev => [created, ...prev]);
@@ -402,8 +427,23 @@ export default function App() {
       newHistory = [entryWithRecorder, ...currentHistory];
     }
 
+    // Auto-sync weightHistory desde las medidas (peso no redundante)
+    const currentWeightHistory = client?.weightHistory || [];
+    const weightEntry = { date: entry.date, weight: entry.weight };
+    const weightIndex = currentWeightHistory.findIndex(w => w.date === entry.date);
+    let newWeightHistory: { date: string; weight: number }[];
+    if (weightIndex >= 0) {
+      newWeightHistory = [...currentWeightHistory];
+      newWeightHistory[weightIndex] = weightEntry;
+    } else {
+      newWeightHistory = [weightEntry, ...currentWeightHistory];
+    }
+
     try {
-      const updated = await clientsService.update(clientId, { measurementsHistory: newHistory });
+      const updated = await clientsService.update(clientId, {
+        measurementsHistory: newHistory,
+        weightHistory: newWeightHistory,
+      });
       if (mountedRef.current) setClients(prev => prev.map(c => c.id === clientId ? updated : c));
       if (currentUser.id === clientId) {
         setCurrentUser(updated);

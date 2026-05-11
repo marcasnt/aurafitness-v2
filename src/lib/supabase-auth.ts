@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { User, RoutineDay, WorkoutLog, Message, Exercise as FitnessExercise } from '../types/fitness';
 import { Database } from './supabase';
+import { addOneMonth } from './dateHelpers';
 import bcrypt from 'bcryptjs';
 
 type Profile = Database['public']['Tables']['profiles']['Row'];
@@ -130,11 +131,23 @@ export const clientsService = {
     return authService.getClients();
   },
 
-  async create(client: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: import('../types/fitness').MeasurementsEntry }): Promise<User> {
+  async create(client: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: import('../types/fitness').MeasurementsEntry; firstPaymentDate?: string }): Promise<User> {
     const passwordHash = await bcrypt.hash(client.password, 10);
 
     const today = new Date().toISOString().split('T')[0];
     const measurementsHistory = client.initialMeasurements ? [client.initialMeasurements] : [];
+
+    // Payment logic: if firstPaymentDate provided, treat as already paid
+    const firstPaymentDate = client.firstPaymentDate || '';
+    const hasFirstPayment = !!firstPaymentDate;
+    const nextPaymentDate = hasFirstPayment ? addOneMonth(firstPaymentDate) : today;
+    const paymentStatus: 'paid' | 'pending' = hasFirstPayment ? 'paid' : 'pending';
+    const paymentHistory = hasFirstPayment ? [{
+      date: firstPaymentDate,
+      amount: client.monthlyFee || 0,
+      status: 'paid' as const,
+      method: 'Registro inicial',
+    }] : [];
 
     const { data, error } = await supabase
       .from('profiles')
@@ -151,10 +164,10 @@ export const clientsService = {
         streak: 0,
         adherence_rate: 100,
         monthly_fee: client.monthlyFee || 0,
-        next_payment_date: today,
-        payment_status: 'pending',
+        next_payment_date: nextPaymentDate,
+        payment_status: paymentStatus,
         weight_history: client.weightHistory || [],
-        payment_history: [],
+        payment_history: paymentHistory,
         measurements_history: measurementsHistory,
       })
       .select()
@@ -201,16 +214,17 @@ export const clientsService = {
 
   async markPaymentPaid(id: string): Promise<void> {
     const today = new Date().toISOString().split('T')[0];
-    const nextMonth = new Date();
-    nextMonth.setDate(nextMonth.getDate() + 30);
 
     const { data: profile, error: fetchError } = await supabase
       .from('profiles')
-      .select('monthly_fee, payment_history')
+      .select('monthly_fee, payment_history, next_payment_date')
       .eq('id', id)
       .single();
 
     if (fetchError) throw fetchError;
+
+    const currentNextDate = profile.next_payment_date || today;
+    const newNextDate = addOneMonth(currentNextDate);
 
     const newEntry = { date: today, amount: profile.monthly_fee, status: 'paid' as const, method: 'Confirmado en app' };
     const updatedHistory = [newEntry, ...(profile.payment_history || [])];
@@ -219,7 +233,7 @@ export const clientsService = {
       .from('profiles')
       .update({
         payment_status: 'paid',
-        next_payment_date: nextMonth.toISOString().split('T')[0],
+        next_payment_date: newNextDate,
         payment_history: updatedHistory,
       })
       .eq('id', id);
