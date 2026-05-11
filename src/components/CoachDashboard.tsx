@@ -5,6 +5,7 @@ import {
   Phone, Shield, BarChart3, Flame,
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard
 } from 'lucide-react';
+import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types/fitness';
 import { clientsService, exercisesService, storageService } from '../lib/supabase-auth';
 import MeasurementsModal from './MeasurementsModal';
@@ -1215,7 +1216,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         onClick={() => { setMeasurementsClientId(selectedClient.id); setShowMeasurementsModal(true); }}
                         className="bg-[#d4f826] text-black font-bold text-[10px] py-1.5 px-3 rounded-xl hover:bg-[#e2fa52] transition-all flex items-center gap-1.5"
                       >
-                        <Ruler className="w-3 h-3" />
+                        <RulerIcon className="w-3 h-3" />
                         Actualizar Medidas
                       </button>
                     </div>

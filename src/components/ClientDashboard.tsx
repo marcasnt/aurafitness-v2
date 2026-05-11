@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Scale, Plus, Play, Pause, FastForward, Image as ImageIcon, Camera, Ruler, TrendingDown, TrendingUp as TrendUpIcon } from 'lucide-react';
+import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Scale, Plus, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon } from 'lucide-react';
+import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
 import MeasurementsModal from './MeasurementsModal';
 import { WeightChart, BodyMeasurementsChart, BicepsChart, MeasurementCards, WorkoutHistoryChart } from './ProgressCharts';
@@ -340,7 +341,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                 onClick={() => setShowMeasurementsModal(true)}
                 className="bg-[#d4f826] text-black font-bold text-[10px] py-2 px-3 rounded-xl hover:bg-[#e2fa52] transition-all flex items-center gap-1.5"
               >
-                <Ruler className="w-3.5 h-3.5" />
+                <RulerIcon className="w-3.5 h-3.5" />
                 Registrar Medidas
               </button>
             </div>
@@ -402,7 +403,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
             {client.measurementsHistory && client.measurementsHistory.length > 0 && (
               <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">
                 <h3 className="text-xs uppercase tracking-wider text-white font-bold mb-3 flex items-center gap-2">
-                  <Ruler className="w-4 h-4 text-[#00e5ff]"/> Historial de Medidas
+                  <RulerIcon className="w-4 h-4 text-[#00e5ff]"/> Historial de Medidas
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[10px]">

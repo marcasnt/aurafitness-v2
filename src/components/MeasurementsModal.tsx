@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Ruler } from 'lucide-react';
+import { X } from 'lucide-react';
+import { RulerIcon } from './RulerIcon';
 import { MeasurementsEntry } from '../types/fitness';
 import { calculateBodyFat, getBodyFatCategory, getBodyFatColor } from '../lib/bodyFatCalculator';
 
@@ -150,7 +151,7 @@ export default function MeasurementsModal({
           </div>
 
           <div className="flex items-center gap-2 mb-2">
-            <Ruler className="w-4 h-4 text-[#d4f826]" />
+            <RulerIcon className="w-4 h-4 text-[#d4f826]" />
             <span className="text-[10px] text-[#a1a1aa] font-mono uppercase tracking-wider">Datos Corporales</span>
           </div>
 
