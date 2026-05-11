@@ -29,12 +29,15 @@ export type Database = {
           avatar_url: string | null;
           goal: string | null;
           phone: string | null;
+          gender: string | null;
+          age: number | null;
           streak: number;
           adherence_rate: number;
           monthly_fee: number;
           next_payment_date: string | null;
           payment_status: 'paid' | 'pending' | 'overdue';
           weight_history: { date: string; weight: number }[];
+          measurements_history: { date: string; neck: number; waist: number; hips: number; thighsLeft: number; thighsRight: number; bicepsLeft: number; bicepsRight: number; height: number; weight: number; bodyFat?: number }[];
           payment_history: { date: string; amount: number; status: string; method?: string }[];
           created_at: string;
           updated_at: string;
