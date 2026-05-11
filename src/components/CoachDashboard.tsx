@@ -72,6 +72,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [newClientGoal, setNewClientGoal] = useState('');
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientSelfiePreview, setNewClientSelfiePreview] = useState<string>('');
+  const [newClientSelfieFile, setNewClientSelfieFile] = useState<File | null>(null);
   const [newClientFee, setNewClientFee] = useState(120);
   const [newClientPaymentDate, setNewClientPaymentDate] = useState('');
   const [newClientHeight, setNewClientHeight] = useState('');
@@ -183,7 +184,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const handleSelfieUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Limpiar blob URL anterior si existe
+    if (newClientSelfiePreview && newClientSelfiePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(newClientSelfiePreview);
+    }
     const url = URL.createObjectURL(file);
+    setNewClientSelfieFile(file);
     setNewClientSelfiePreview(url);
   };
 
@@ -205,7 +211,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   };
   
   // Handle creating client
-  const handleCreateClient = (e: React.FormEvent) => {
+  const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientName || !newClientEmail || !newClientPassword) return;
 
@@ -252,30 +258,50 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       gender: newClientGender,
       age: ageVal,
       streak: 0,
-      avatar: newClientSelfiePreview || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200`,
-      selfieUrl: newClientSelfiePreview || '',
+      avatar: '',
+      selfieUrl: '',
       monthlyFee: newClientFee,
       weightHistory: [{ date: today, weight: weightVal }],
       initialMeasurements,
     };
 
-    onAddClient(newClient).then((created: User | undefined) => {
+    try {
+      const created = await onAddClient(newClient);
       if (created?.id) {
         setClientPasswords(prev => ({ ...prev, [created.id]: newClientPassword }));
         setSelectedClientId(created.id);
-      }
-    });
 
-    // Reset fields
-    setNewClientName('');
-    setNewClientEmail('');
-    setNewClientPassword('');
-    setNewClientGoal('');
-    setNewClientPhone('');
-    setNewClientSelfiePreview('');
-    setNewClientFee(120);
-    setNewClientPaymentDate('');
-    setShowAddClientModal(false);
+        // Si hay foto seleccionada, subirla a Supabase Storage con el ID del cliente creado
+        if (newClientSelfieFile) {
+          try {
+            const publicUrl = await storageService.uploadAvatar(created.id, newClientSelfieFile);
+            await onUpdateClient(created.id, { avatar: publicUrl, selfieUrl: publicUrl });
+          } catch (uploadErr: any) {
+            console.error('Error subiendo avatar:', uploadErr);
+            alert('Cliente creado, pero error al subir foto: ' + (uploadErr.message || 'desconocido'));
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Error creando cliente:', err);
+      alert('Error al crear cliente: ' + (err.message || 'desconocido'));
+    } finally {
+      // Limpiar blob URL de memoria
+      if (newClientSelfiePreview && newClientSelfiePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(newClientSelfiePreview);
+      }
+      // Reset fields
+      setNewClientName('');
+      setNewClientEmail('');
+      setNewClientPassword('');
+      setNewClientGoal('');
+      setNewClientPhone('');
+      setNewClientSelfiePreview('');
+      setNewClientSelfieFile(null);
+      setNewClientFee(120);
+      setNewClientPaymentDate('');
+      setShowAddClientModal(false);
+    }
   };
 
   // Handle creating routine day

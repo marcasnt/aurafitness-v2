@@ -9,13 +9,15 @@ type Exercise = Database['public']['Tables']['exercises']['Row'];
 
 export const COACH_ID = '00000000-0000-0000-0000-000000000001';
 
+const DEFAULT_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200';
+
 const mapProfileToUser = (p: Profile): User => ({
   id: p.id,
   email: p.email,
   name: p.name,
   role: p.role,
-  avatar: p.avatar_url || undefined,
-  selfieUrl: p.avatar_url || undefined,
+  avatar: p.avatar_url || DEFAULT_AVATAR,
+  selfieUrl: p.avatar_url || DEFAULT_AVATAR,
   goal: p.goal || undefined,
   phone: p.phone || undefined,
   gender: p.gender as 'male' | 'female' | undefined,
@@ -151,7 +153,7 @@ export const clientsService = {
         monthly_fee: client.monthlyFee || 0,
         next_payment_date: today,
         payment_status: 'pending',
-        weight_history: [],
+        weight_history: client.weightHistory || [],
         payment_history: [],
         measurements_history: measurementsHistory,
       })
