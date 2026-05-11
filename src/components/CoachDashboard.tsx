@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Users, Calendar, MessageSquare, Plus, Search, Dumbbell, 
   TrendingUp, MessageCircle, Copy, Check, Trash2, Pencil,
-  Phone, Shield, BarChart3, Flame,
+  Phone, Shield, BarChart3, Flame, Timer,
   Camera, Image as ImageIcon, Upload, X, Link as LinkIcon, CreditCard,
   User as UserIcon, ClipboardList
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { clientsService, exercisesService, storageService } from '../lib/supabas
 import MeasurementsModal from './MeasurementsModal';
 import { MeasurementCards } from './ProgressCharts';
 import ProgressLineChart from './ProgressLineChart';
+import { ExerciseSelectorModal } from './ExerciseSelectorModal';
 import { calculateBodyFat, getBodyFatColor } from '../lib/bodyFatCalculator';
 
 interface CoachDashboardProps {
@@ -136,6 +137,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [exerciseImageMode, setExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
   const [catalogSearch, setCatalogSearch] = useState('');
   const exerciseImageInputRef = useRef<HTMLInputElement>(null);
+
+  // Exercise Selector Modal State
+  const [showExerciseSelector, setShowExerciseSelector] = useState(false);
+  const [showEditExerciseSelector, setShowEditExerciseSelector] = useState(false);
 
   // WhatsApp Message State
   const [copiedClientId, setCopiedClientId] = useState<string | null>(null);
@@ -356,7 +361,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
   // Handle adding exercise
   const handleAddExerciseToRoutine = async (routineDayId: string) => {
-    const finalName = selectedPreset || customExerciseName;
+    const finalName = customExerciseName.trim();
     if (!finalName) return;
 
     let finalImageUrl = exerciseImageUrl;
@@ -387,7 +392,6 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
     // Reset exercise input fields
     setCustomExerciseName('');
-    setSelectedPreset('');
     setExerciseNotes('');
     setExerciseSetDetails([
       { reps: 15, weight: 15 },
@@ -398,6 +402,52 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setExerciseSets(4);
     setExerciseImageUrl('');
     setExerciseImageFile(null);
+    if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
+  };
+
+  // Handle preset selection from modal (CREATE form)
+  const handleSelectPreset = (preset: Exercise) => {
+    setCustomExerciseName(preset.name);
+    setExerciseCategory(preset.category);
+    setExerciseSets(preset.sets);
+    setExerciseReps(preset.reps);
+    setExerciseWeight(preset.weight);
+    if (preset.setDetails && preset.setDetails.length > 0) {
+      setExerciseSetDetails(preset.setDetails);
+    } else {
+      const arr = Array.from({ length: preset.sets }, () => ({
+        reps: parseInt(preset.reps) || 10,
+        weight: preset.weight,
+      }));
+      setExerciseSetDetails(arr);
+    }
+    setExerciseRest(preset.restTime);
+    setExerciseNotes(preset.notes || '');
+    setExerciseImageUrl(preset.imageUrl || '');
+    setExerciseImageFile(null);
+    if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
+  };
+
+  // Handle preset selection from modal (EDIT form)
+  const handleSelectEditPreset = (preset: Exercise) => {
+    setEditCustomExerciseName(preset.name);
+    setEditExerciseCategory(preset.category);
+    setEditExerciseSets(preset.sets);
+    setEditExerciseReps(preset.reps);
+    setEditExerciseWeight(preset.weight);
+    if (preset.setDetails && preset.setDetails.length > 0) {
+      setEditExerciseSetDetails(preset.setDetails);
+    } else {
+      const arr = Array.from({ length: preset.sets }, () => ({
+        reps: parseInt(preset.reps) || 10,
+        weight: preset.weight,
+      }));
+      setEditExerciseSetDetails(arr);
+    }
+    setEditExerciseRest(preset.restTime);
+    setEditExerciseNotes(preset.notes || '');
+    setEditExerciseImageUrl(preset.imageUrl || '');
+    setEditExerciseImageFile(null);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
@@ -414,7 +464,6 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const openEditExerciseModal = (routineId: string, exercise: Exercise) => {
     setEditingExercise({ exercise, routineId });
     setEditExerciseName(exercise.name);
-    setEditSelectedPreset('');
     setEditCustomExerciseName(exercise.name);
     setEditExerciseCategory(exercise.category);
     setEditExerciseSets(exercise.sets);
@@ -452,7 +501,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       }
     }
 
-    const finalName = editSelectedPreset || editCustomExerciseName || editExerciseName;
+    const finalName = editCustomExerciseName.trim() || editExerciseName;
 
     const updates: Partial<Exercise> = {};
     if (finalName !== exercise.name) updates.name = finalName;
@@ -474,7 +523,6 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setEditExerciseImageFile(null);
     setEditExerciseImageMode('url');
     setEditExerciseSetDetails([]);
-    setEditSelectedPreset('');
     setEditCustomExerciseName('');
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
@@ -777,219 +825,242 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
                   {clientWorkspaceTab === 'profile' && (
                   <div className="space-y-6">
-                  {/* Athlete Profile Banner */}
-                  <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-5 flex flex-col md:flex-row md:items-center justify-between gap-5">
-                    {/* Input oculto para editar foto del cliente */}
-                    <input
-                      ref={editAvatarInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleEditClientAvatar}
-                      className="hidden"
-                    />
+                    {/* Athlete Profile Header */}
+                    <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-5 md:p-6">
+                      {/* Input oculto para editar foto del cliente */}
+                      <input
+                        ref={editAvatarInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleEditClientAvatar}
+                        className="hidden"
+                      />
 
-                    <div className="flex items-center gap-4">
-                      <div className="relative group cursor-pointer" onClick={() => editAvatarInputRef.current?.click()} title="Cambiar foto del cliente">
-                        <img
-                          src={selectedClient.selfieUrl || selectedClient.avatar}
-                          alt={selectedClient.name}
-                          className="w-14 h-14 rounded-full object-cover border-2 border-[#d4f826]"
-                        />
-                        <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                          <Camera className="w-4 h-4 text-[#d4f826]" />
-                          <span className="text-[8px] text-white mt-0.5">CAMBIAR</span>
+                      <div className="flex items-start gap-4">
+                        <div className="relative group cursor-pointer shrink-0" onClick={() => editAvatarInputRef.current?.click()} title="Cambiar foto del cliente">
+                          <img
+                            src={selectedClient.selfieUrl || selectedClient.avatar}
+                            alt={selectedClient.name}
+                            className="w-16 h-16 rounded-full object-cover border-2 border-[#d4f826]"
+                          />
+                          <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                            <Camera className="w-5 h-5 text-[#d4f826]" />
+                            <span className="text-[8px] text-white mt-0.5">CAMBIAR</span>
+                          </div>
+                          <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1">
+                            <Camera className="w-3 h-3 text-black" />
+                          </div>
                         </div>
-                        <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1">
-                          <Camera className="w-3 h-3 text-black" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl font-extrabold text-white">{selectedClient.name}</h2>
+                            <span className="text-[10px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-2.5 py-1 rounded-full font-bold">
+                              Plan Activo
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#8e8e93] mt-1.5">
+                            <span className="text-white font-semibold">Meta:</span> {selectedClient.goal}
+                          </p>
+                          <div className="flex items-center gap-3 mt-2 flex-wrap">
+                            <p className="text-[11px] text-[#8e8e93] flex items-center gap-1">
+                              <Phone className="w-3 h-3 text-[#3f3f46] shrink-0" /> {selectedClient.phone || 'Sin Teléfono'}
+                            </p>
+                            <span className="text-[#3f3f46]">·</span>
+                            <p className="text-[11px] text-[#8e8e93] break-all">{selectedClient.email}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h2 className="text-lg font-bold text-white">{selectedClient.name}</h2>
-                          <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-2 py-0.5 rounded-full">
-                            Plan Activo
-                          </span>
-                        </div>
-                        <p className="text-xs text-[#8e8e93] mt-1">
-                          <span className="text-white">Meta:</span> {selectedClient.goal}
-                        </p>
-                        <p className="text-[11px] text-[#8e8e93] mt-0.5 flex items-center gap-1 flex-wrap break-all">
-                          <Phone className="w-3 h-3 text-[#3f3f46] shrink-0" /> {selectedClient.phone || 'Sin Telefono'} · <span className="break-all">{selectedClient.email}</span>
-                        </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      {/* WhatsApp Sender */}
-                      <div className="bg-[#1c1c1f] border border-[#27272a] rounded-[12px] p-3 shrink-0 flex flex-col space-y-2">
-                        <div className="text-[10px] uppercase tracking-wider text-[#8e8e93] font-bold flex items-center gap-1.5">
-                          <MessageCircle className="w-3.5 h-3.5 text-[#25d366]" /> WHATSAPP
+                    {/* Acciones Rápidas — Grid de 2 columnas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* WhatsApp & Credenciales */}
+                      <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-5 flex flex-col gap-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-[#25d366]/10 flex items-center justify-center">
+                            <MessageCircle className="w-4 h-4 text-[#25d366]" />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-white uppercase tracking-wider">WhatsApp</h3>
+                            <p className="text-[10px] text-[#8e8e93]">Envío de credenciales y accesos</p>
+                          </div>
                         </div>
                         <button
                           onClick={() => copyWhatsAppCredentials(selectedClient)}
-                          className="w-full bg-[#25d366] text-black font-bold text-[11px] py-2 px-3 rounded-[8px] hover:bg-[#20ba5a] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          className="w-full bg-[#25d366] text-black font-bold text-xs py-3 px-4 rounded-[12px] hover:bg-[#20ba5a] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                         >
                           {copiedClientId === selectedClient.id ? (
-                            <><Check className="w-3.5 h-3.5" /> COPIADO</>
+                            <><Check className="w-4 h-4" /> COPIADO AL PORTAPAPELES</>
                           ) : (
-                            <><Copy className="w-3.5 h-3.5" /> ENVIAR ACCESOS</>
+                            <><Copy className="w-4 h-4" /> ENVIAR ACCESOS</>
                           )}
                         </button>
                         <button
                           onClick={() => handleResetPassword(selectedClient)}
-                          className="w-full bg-transparent text-[#d4f826] border border-[#3f3f46] font-bold text-[10px] py-1.5 px-3 rounded-[8px] hover:bg-[#3f3f46] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
+                          className="w-full bg-transparent text-[#d4f826] border border-[#3f3f46] font-bold text-xs py-2.5 px-4 rounded-[12px] hover:bg-[#3f3f46] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                         >
-                          <Shield className="w-3 h-3" /> NUEVA CONTRASENA
+                          <Shield className="w-4 h-4" /> GENERAR NUEVA CONTRASEÑA
                         </button>
                       </div>
 
-                      {/* Payment Management Widget */}
-                      <div className={`bg-[#141416] border rounded-[12px] p-3 shrink-0 flex flex-col space-y-2 ${selectedClient.paymentStatus === 'overdue' ? 'border-[#ff5449]/30' : selectedClient.paymentStatus === 'pending' ? 'border-[#e5ba73]/30' : 'border-[#27272a]'}`}>
-                        <div className="text-[10px] uppercase tracking-wider font-bold flex items-center gap-1.5">
-                          <CreditCard className="w-3.5 h-3.5 text-white" /> PAGO
+                      {/* Gestión de Pagos */}
+                      <div className={`bg-[#141416] border rounded-[16px] p-5 flex flex-col gap-3 ${selectedClient.paymentStatus === 'overdue' ? 'border-[#ff5449]/30' : selectedClient.paymentStatus === 'pending' ? 'border-[#e5ba73]/30' : 'border-[#27272a]'}`}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-[#27272a] flex items-center justify-center">
+                            <CreditCard className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Gestión de Pago</h3>
+                            <p className="text-[10px] text-[#8e8e93]">Control de cuotas y vencimientos</p>
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-[#8e8e93]">Cuota:</span>
-                            <span className="text-white font-bold">€{selectedClient.monthlyFee}</span>
+
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-[#0a0a0c] rounded-[12px] p-3 text-center border border-[#27272a]">
+                            <p className="text-[10px] text-[#8e8e93] uppercase">Cuota</p>
+                            <p className="text-sm font-extrabold text-white mt-1">€{selectedClient.monthlyFee}</p>
                           </div>
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-[#8e8e93]">Proximo:</span>
-                            <span className="text-white">{selectedClient.nextPaymentDate}</span>
+                          <div className="bg-[#0a0a0c] rounded-[12px] p-3 text-center border border-[#27272a]">
+                            <p className="text-[10px] text-[#8e8e93] uppercase">Próximo</p>
+                            <p className="text-xs font-bold text-white mt-1">{selectedClient.nextPaymentDate}</p>
                           </div>
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-[#8e8e93]">Estado:</span>
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-[4px] ${selectedClient.paymentStatus === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : selectedClient.paymentStatus === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
+                          <div className="bg-[#0a0a0c] rounded-[12px] p-3 text-center border border-[#27272a]">
+                            <p className="text-[10px] text-[#8e8e93] uppercase">Estado</p>
+                            <span className={`inline-block text-[10px] font-bold px-2 py-1 rounded-[6px] mt-1 ${selectedClient.paymentStatus === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : selectedClient.paymentStatus === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
                               {selectedClient.paymentStatus === 'paid' ? 'PAGADO' : selectedClient.paymentStatus === 'overdue' ? 'VENCIDO' : 'PENDIENTE'}
                             </span>
                           </div>
                         </div>
-                        <div className="flex flex-wrap gap-1.5 pt-1">
+
+                        <div className="flex gap-2">
                           <button
                             onClick={() => onMarkPaymentPaid(selectedClient.id)}
-                            className="flex-1 bg-[#25d366] text-black font-bold text-[10px] py-1.5 rounded-[8px] hover:bg-[#20ba5a] active:scale-[0.98] transition-all"
+                            className="flex-1 bg-[#25d366] text-black font-bold text-[10px] py-2.5 rounded-[12px] hover:bg-[#20ba5a] active:scale-[0.98] transition-all"
                           >
                             MARCAR PAGADO
                           </button>
                           <button
                             onClick={() => {
                               const newDate = prompt('Nueva fecha de pago (YYYY-MM-DD):', selectedClient.nextPaymentDate);
-                            if (newDate) onUpdateClientPayment(selectedClient.id, { nextPaymentDate: newDate, paymentStatus: selectedClient.paymentStatus, monthlyFee: selectedClient.monthlyFee });
-                          }}
-                          className="bg-[#27272a] text-white hover:bg-[#3f3f46] text-[10px] px-3 py-1.5 rounded-lg transition-all font-mono"
-                        >
-                          ✏ FECHA
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newFee = prompt('Nueva cuota mensual (€):', selectedClient.monthlyFee.toString());
-                            if (newFee && !isNaN(Number(newFee))) onUpdateClientPayment(selectedClient.id, { nextPaymentDate: selectedClient.nextPaymentDate, paymentStatus: selectedClient.paymentStatus, monthlyFee: Number(newFee) });
-                          }}
-                          className="bg-[#27272a] text-white hover:bg-[#3f3f46] text-[10px] px-3 py-1.5 rounded-lg transition-all font-mono"
-                        >
-                          € CUOTA
-                        </button>
-                      </div>
-                      {/* Payment history full table */}
-                      <div className="border-t border-[#27272a] pt-2">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[9px] text-[#71717a] uppercase font-mono font-bold">Historial Completo de Pagos</p>
-                          <button
-                            onClick={addPaymentEntry}
-                            className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-2 py-1 rounded-[4px] font-bold hover:bg-[#d4f826]/20 transition-all"
+                              if (newDate) onUpdateClientPayment(selectedClient.id, { nextPaymentDate: newDate, paymentStatus: selectedClient.paymentStatus, monthlyFee: selectedClient.monthlyFee });
+                            }}
+                            className="bg-[#27272a] text-white hover:bg-[#3f3f46] text-[10px] px-4 py-2.5 rounded-[12px] transition-all font-bold"
                           >
-                            + AGREGAR
+                            ✏ FECHA
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newFee = prompt('Nueva cuota mensual (€):', selectedClient.monthlyFee.toString());
+                              if (newFee && !isNaN(Number(newFee))) onUpdateClientPayment(selectedClient.id, { nextPaymentDate: selectedClient.nextPaymentDate, paymentStatus: selectedClient.paymentStatus, monthlyFee: Number(newFee) });
+                            }}
+                            className="bg-[#27272a] text-white hover:bg-[#3f3f46] text-[10px] px-4 py-2.5 rounded-[12px] transition-all font-bold"
+                          >
+                            € CUOTA
                           </button>
                         </div>
-                        <div className="max-h-48 overflow-y-auto">
-                          <table className="w-full text-[10px]">
-                            <thead>
-                              <tr className="text-[#52525b] border-b border-[#27272a]">
-                                <th className="text-left py-1.5 font-mono uppercase">Fecha</th>
-                                <th className="text-right py-1.5 font-mono uppercase">Monto</th>
-                                <th className="text-right py-1.5 font-mono uppercase">Estado</th>
-                                <th className="text-right py-1.5 font-mono uppercase">Metodo</th>
-                                <th className="text-right py-1.5 font-mono uppercase"></th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#27272a]">
-                              {selectedClient.paymentHistory?.map((ph, i) => (
-                                editingPaymentIndex === i ? (
-                                  <tr key={i} className="bg-[#1c1c1f]">
-                                    <td className="py-1">
-                                      <input
-                                        type="date"
-                                        value={editPaymentDate}
-                                        onChange={(e) => setEditPaymentDate(e.target.value)}
-                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white"
-                                      />
-                                    </td>
-                                    <td className="py-1">
-                                      <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        value={editPaymentAmount}
-                                        onChange={(e) => setEditPaymentAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white text-right"
-                                      />
-                                    </td>
-                                    <td className="py-1">
-                                      <select
-                                        value={editPaymentStatus}
-                                        onChange={(e) => setEditPaymentStatus(e.target.value as any)}
-                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white"
-                                      >
-                                        <option value="paid">PAGADO</option>
-                                        <option value="pending">PENDIENTE</option>
-                                        <option value="overdue">VENCIDO</option>
-                                      </select>
-                                    </td>
-                                    <td className="py-1">
-                                      <input
-                                        type="text"
-                                        value={editPaymentMethod}
-                                        onChange={(e) => setEditPaymentMethod(e.target.value)}
-                                        className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[4px] text-[10px] px-1 py-0.5 text-white"
-                                      />
-                                    </td>
-                                    <td className="py-1">
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <button onClick={savePaymentEdit} className="text-[#25d366] hover:text-white p-0.5 rounded-[4px] hover:bg-[#25d366]/20 transition-all"><Check className="w-3 h-3"/></button>
-                                        <button onClick={() => setEditingPaymentIndex(null)} className="text-[#ff5449] hover:text-white p-0.5 rounded-[4px] hover:bg-[#ff5449]/20 transition-all"><X className="w-3 h-3"/></button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ) : (
-                                  <tr key={i}>
-                                    <td className="py-1.5 text-[#a1a1aa] font-mono">{ph.date}</td>
-                                    <td className="py-1.5 text-right text-white font-bold">€{ph.amount}</td>
-                                    <td className="py-1.5 text-right">
-                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] ${ph.status === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : ph.status === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
-                                        {ph.status === 'paid' ? 'PAGADO' : ph.status === 'overdue' ? 'VENCIDO' : 'PENDIENTE'}
-                                      </span>
-                                    </td>
-                                    <td className="py-1.5 text-right text-[#8e8e93]">{ph.method || '--'}</td>
-                                    <td className="py-1.5">
-                                      <div className="flex items-center gap-1 justify-end">
-                                        <button onClick={() => openEditPayment(i)} className="text-[#3f3f46] hover:text-[#d4f826] p-0.5 rounded-[4px] hover:bg-[#d4f826]/10 transition-all"><Pencil className="w-3 h-3"/></button>
-                                        <button onClick={() => deletePaymentEntry(i)} className="text-[#3f3f46] hover:text-[#ff5449] p-0.5 rounded-[4px] hover:bg-[#ff5449]/10 transition-all"><Trash2 className="w-3 h-3"/></button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )
-                              ))}
-                              {(!selectedClient.paymentHistory || selectedClient.paymentHistory.length === 0) && (
-                                <tr>
-                                  <td colSpan={5} className="py-2 text-center text-[#52525b] text-[10px]">Sin registros de pago.</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
                       </div>
                     </div>
+
+                    {/* Historial de Pagos — Ancho completo */}
+                    <div className="bg-[#141416] border border-[#27272a] rounded-[16px] p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <ClipboardList className="w-4 h-4 text-[#d4f826]" />
+                          <h3 className="text-xs font-bold text-white uppercase tracking-wider">Historial Completo de Pagos</h3>
+                        </div>
+                        <button
+                          onClick={addPaymentEntry}
+                          className="text-[10px] bg-[#d4f826]/10 text-[#d4f826] border border-[#d4f826]/20 px-3 py-1.5 rounded-[8px] font-bold hover:bg-[#d4f826]/20 transition-all flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" /> AGREGAR
+                        </button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px]">
+                          <thead>
+                            <tr className="text-[#52525b] border-b border-[#27272a]">
+                              <th className="text-left py-2 font-mono uppercase">Fecha</th>
+                              <th className="text-right py-2 font-mono uppercase">Monto</th>
+                              <th className="text-right py-2 font-mono uppercase">Estado</th>
+                              <th className="text-right py-2 font-mono uppercase">Método</th>
+                              <th className="text-right py-2 font-mono uppercase w-16"></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#27272a]">
+                            {selectedClient.paymentHistory?.map((ph, i) => (
+                              editingPaymentIndex === i ? (
+                                <tr key={i} className="bg-[#1c1c1f]">
+                                  <td className="py-2">
+                                    <input
+                                      type="date"
+                                      value={editPaymentDate}
+                                      onChange={(e) => setEditPaymentDate(e.target.value)}
+                                      className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[11px] px-2 py-1 text-white"
+                                    />
+                                  </td>
+                                  <td className="py-2">
+                                    <input
+                                      type="text"
+                                      inputMode="numeric"
+                                      value={editPaymentAmount}
+                                      onChange={(e) => setEditPaymentAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                                      className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[11px] px-2 py-1 text-white text-right"
+                                    />
+                                  </td>
+                                  <td className="py-2">
+                                    <select
+                                      value={editPaymentStatus}
+                                      onChange={(e) => setEditPaymentStatus(e.target.value as any)}
+                                      className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[11px] px-2 py-1 text-white"
+                                    >
+                                      <option value="paid">PAGADO</option>
+                                      <option value="pending">PENDIENTE</option>
+                                      <option value="overdue">VENCIDO</option>
+                                    </select>
+                                  </td>
+                                  <td className="py-2">
+                                    <input
+                                      type="text"
+                                      value={editPaymentMethod}
+                                      onChange={(e) => setEditPaymentMethod(e.target.value)}
+                                      className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[11px] px-2 py-1 text-white"
+                                    />
+                                  </td>
+                                  <td className="py-2">
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <button onClick={savePaymentEdit} className="text-[#25d366] hover:text-white p-1 rounded-[4px] hover:bg-[#25d366]/20 transition-all"><Check className="w-3.5 h-3.5"/></button>
+                                      <button onClick={() => setEditingPaymentIndex(null)} className="text-[#ff5449] hover:text-white p-1 rounded-[4px] hover:bg-[#ff5449]/20 transition-all"><X className="w-3.5 h-3.5"/></button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : (
+                                <tr key={i} className="hover:bg-[#1c1c1f]/50 transition-colors">
+                                  <td className="py-2.5 text-[#a1a1aa] font-mono">{ph.date}</td>
+                                  <td className="py-2.5 text-right text-white font-bold">€{ph.amount}</td>
+                                  <td className="py-2.5 text-right">
+                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-[6px] ${ph.status === 'paid' ? 'bg-[#25d366]/10 text-[#25d366]' : ph.status === 'overdue' ? 'bg-[#ff5449]/10 text-[#ff5449]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>
+                                      {ph.status === 'paid' ? 'PAGADO' : ph.status === 'overdue' ? 'VENCIDO' : 'PENDIENTE'}
+                                    </span>
+                                  </td>
+                                  <td className="py-2.5 text-right text-[#8e8e93]">{ph.method || '--'}</td>
+                                  <td className="py-2.5">
+                                    <div className="flex items-center gap-1 justify-end">
+                                      <button onClick={() => openEditPayment(i)} className="text-[#3f3f46] hover:text-[#d4f826] p-1 rounded-[4px] hover:bg-[#d4f826]/10 transition-all"><Pencil className="w-3.5 h-3.5"/></button>
+                                      <button onClick={() => deletePaymentEntry(i)} className="text-[#3f3f46] hover:text-[#ff5449] p-1 rounded-[4px] hover:bg-[#ff5449]/10 transition-all"><Trash2 className="w-3.5 h-3.5"/></button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            ))}
+                            {(!selectedClient.paymentHistory || selectedClient.paymentHistory.length === 0) && (
+                              <tr>
+                                <td colSpan={5} className="py-4 text-center text-[#52525b] text-[11px]">Sin registros de pago.</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  </div>
                   </div>
                   )}
 
@@ -1107,57 +1178,26 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                 <Plus className="w-3 h-3" /> Cargar Nuevo Ejercicio
                               </p>
 
+                              {/* Fila 1: Catálogo + Nombre + Categoría */}
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Ejercicio Preestablecido</label>
-                                  <select
-                                    value={selectedPreset}
-                                    onChange={(e) => {
-                                      const name = e.target.value;
-                                      setSelectedPreset(name);
-                                      if (name) setCustomExerciseName('');
-                                      const preset = globalPresets.find(p => p.name === name);
-                                      if (preset) {
-                                        setExerciseCategory(preset.category);
-                                        setExerciseSets(preset.sets);
-                                        setExerciseReps(preset.reps);
-                                        setExerciseWeight(preset.weight);
-                                        if (preset.setDetails && preset.setDetails.length > 0) {
-                                          setExerciseSetDetails(preset.setDetails);
-                                        } else {
-                                          // Generar setDetails plano desde fallback
-                                          const arr = Array.from({ length: preset.sets }, () => ({
-                                            reps: parseInt(preset.reps) || 10,
-                                            weight: preset.weight,
-                                          }));
-                                          setExerciseSetDetails(arr);
-                                        }
-                                        setExerciseRest(preset.restTime);
-                                        setExerciseNotes(preset.notes || '');
-                                        setExerciseImageUrl(preset.imageUrl || '');
-                                      }
-                                      setExerciseImageFile(null);
-                                      if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
-                                    }}
-                                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Catálogo</label>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowExerciseSelector(true)}
+                                    className="w-full bg-[#18181b] border border-[#d4f826]/30 hover:border-[#d4f826] hover:bg-[#d4f826]/5 rounded-lg text-xs p-2 text-[#d4f826] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
                                   >
-                                    <option value="">-- Elige Movimiento --</option>
-                                    {presetsLoading && <option value="" disabled>Cargando catálogo...</option>}
-                                    {globalPresets.map((p) => (
-                                      <option key={p.id} value={p.name}>{p.name} ({p.category})</option>
-                                    ))}
-                                  </select>
+                                    <Search className="w-3 h-3" />
+                                    {customExerciseName ? 'Cambiar ejercicio' : 'Abrir Catálogo'}
+                                  </button>
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">O nombre personalizado</label>
+                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Nombre del ejercicio</label>
                                   <input
                                     type="text"
                                     placeholder="Ej: Sentadilla profunda"
                                     value={customExerciseName}
-                                    onChange={(e) => {
-                                      setCustomExerciseName(e.target.value);
-                                      if (e.target.value) setSelectedPreset('');
-                                    }}
+                                    onChange={(e) => setCustomExerciseName(e.target.value)}
                                     className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
                                   />
                                 </div>
@@ -1172,6 +1212,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     <option value="Back">Espalda</option>
                                     <option value="Legs">Piernas</option>
                                     <option value="Shoulders">Hombros</option>
+                                    <option value="Biceps">Bíceps</option>
+                                    <option value="Triceps">Tríceps</option>
                                     <option value="Arms">Brazos</option>
                                     <option value="Core">Core</option>
                                     <option value="Cardio">Cardio</option>
@@ -1184,11 +1226,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                <div className="md:col-span-3">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <label className="block text-[10px] text-[#a1a1aa]">Series Individuales (Reps · Peso)</label>
-                                    <div className="flex items-center gap-2">
+                              {/* Toolbar Series + Descanso */}
+                              <div className="bg-[#18181b] border border-[#27272a] rounded-[12px] p-3 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <label className="text-[10px] text-[#a1a1aa] font-bold">Series</label>
+                                    <div className="flex items-center gap-1.5 bg-[#0a0a0c] rounded-[8px] p-0.5 border border-[#27272a]">
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -1198,11 +1241,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                             setExerciseSets(next.length);
                                           }
                                         }}
-                                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#8e8e93] rounded-[4px] text-[10px] hover:text-white active:scale-95 transition-all"
+                                        className="w-7 h-7 flex items-center justify-center bg-[#27272a] text-[#8e8e93] rounded-[6px] text-xs hover:text-white active:scale-95 transition-all"
                                       >
                                         −
                                       </button>
-                                      <span className="text-[10px] text-white font-bold w-4 text-center">{exerciseSetDetails.length}</span>
+                                      <span className="text-xs text-white font-bold w-5 text-center">{exerciseSetDetails.length}</span>
                                       <button
                                         type="button"
                                         onClick={() => {
@@ -1211,33 +1254,53 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                           setExerciseSetDetails(next);
                                           setExerciseSets(next.length);
                                         }}
-                                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#d4f826] rounded-[4px] text-[10px] hover:bg-[#3f3f46] active:scale-95 transition-all"
+                                        className="w-7 h-7 flex items-center justify-center bg-[#27272a] text-[#d4f826] rounded-[6px] text-xs hover:bg-[#3f3f46] active:scale-95 transition-all"
                                       >
                                         +
                                       </button>
                                     </div>
                                   </div>
-                                  <div className="space-y-1.5">
-                                    {exerciseSetDetails.map((s, i) => (
-                                      <div key={i} className="flex items-center gap-2">
-                                        <span className="text-[9px] text-[#8e8e93] w-5 text-right font-bold">{i + 1}</span>
-                                        <input
-                                          type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Reps" value={s.reps || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...exerciseSetDetails]; next[i] = { ...next[i], reps: v === '' ? 0 : Number(v) }; setExerciseSetDetails(next); }}
-                                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
-                                        />
-                                        <span className="text-[9px] text-[#8e8e93]">reps</span>
-                                        <input
-                                          type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Peso" value={s.weight || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...exerciseSetDetails]; next[i] = { ...next[i], weight: v === '' ? 0 : Number(v) }; setExerciseSetDetails(next); }}
-                                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
-                                        />
-                                        <span className="text-[9px] text-[#8e8e93]">kg</span>
-                                      </div>
-                                    ))}
+
+                                  <div className="flex items-center gap-2">
+                                    <Timer className="w-3.5 h-3.5 text-[#8e8e93]" />
+                                    <label className="text-[10px] text-[#a1a1aa] font-bold">Descanso</label>
+                                    <div className="flex items-center bg-[#0a0a0c] rounded-[8px] border border-[#27272a] overflow-hidden">
+                                      <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={exerciseRest || ''}
+                                        onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setExerciseRest(v === '' ? 0 : Number(v)); }}
+                                        className="w-14 bg-transparent text-xs p-1.5 text-white text-center focus:outline-none"
+                                      />
+                                      <span className="text-[9px] text-[#8e8e93] pr-2">s</span>
+                                    </div>
                                   </div>
                                 </div>
-                                <div>
-                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Descanso (s)</label>
-                                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={exerciseRest || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setExerciseRest(v === '' ? 0 : Number(v)); }} className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white" />
+
+                                {/* Grid de series */}
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                  {exerciseSetDetails.map((s, i) => (
+                                    <div key={i} className="bg-[#141416] border border-[#27272a] rounded-[8px] p-2 flex items-center gap-2">
+                                      <span className="text-[9px] text-[#8e8e93] font-bold w-4 text-center">{i + 1}</span>
+                                      <div className="flex-1 flex flex-col gap-1">
+                                        <div className="flex items-center gap-1">
+                                          <input
+                                            type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Reps" value={s.reps || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...exerciseSetDetails]; next[i] = { ...next[i], reps: v === '' ? 0 : Number(v) }; setExerciseSetDetails(next); }}
+                                            className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[10px] p-1 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                                          />
+                                          <span className="text-[8px] text-[#8e8e93]">reps</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <input
+                                            type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Peso" value={s.weight || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...exerciseSetDetails]; next[i] = { ...next[i], weight: v === '' ? 0 : Number(v) }; setExerciseSetDetails(next); }}
+                                            className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[10px] p-1 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                                          />
+                                          <span className="text-[8px] text-[#8e8e93]">kg</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
 
@@ -1784,88 +1847,60 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
             <p className="text-xs text-[#8e8e93] mb-4">Modifica cualquier campo del ejercicio.</p>
 
             <div className="space-y-3">
+              {/* Fila 1: Catálogo + Nombre + Categoría */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Ejercicio Preestablecido</label>
-                  <select
-                    value={editSelectedPreset}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setEditSelectedPreset(name);
-                      if (name) setEditCustomExerciseName('');
-                      const preset = globalPresets.find(p => p.name === name);
-                      if (preset) {
-                        setEditExerciseCategory(preset.category);
-                        setEditExerciseSets(preset.sets);
-                        setEditExerciseReps(preset.reps);
-                        setEditExerciseWeight(preset.weight);
-                        if (preset.setDetails && preset.setDetails.length > 0) {
-                          setEditExerciseSetDetails(preset.setDetails);
-                        } else {
-                          const arr = Array.from({ length: preset.sets }, () => ({
-                            reps: parseInt(preset.reps) || 10,
-                            weight: preset.weight,
-                          }));
-                          setEditExerciseSetDetails(arr);
-                        }
-                        setEditExerciseRest(preset.restTime);
-                        setEditExerciseNotes(preset.notes || '');
-                        setEditExerciseImageUrl(preset.imageUrl || '');
-                        setEditExerciseImageMode(preset.imageUrl ? 'url' : 'url');
-                      }
-                      setEditExerciseImageFile(null);
-                      if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
-                    }}
-                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Catálogo</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowEditExerciseSelector(true)}
+                    className="w-full bg-[#18181b] border border-[#d4f826]/30 hover:border-[#d4f826] hover:bg-[#d4f826]/5 rounded-lg text-xs p-2 text-[#d4f826] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
                   >
-                    <option value="">-- Elige Movimiento --</option>
-                    {presetsLoading && <option value="" disabled>Cargando catálogo...</option>}
-                    {globalPresets.map((p) => (
-                      <option key={p.id} value={p.name}>{p.name} ({p.category})</option>
-                    ))}
-                  </select>
+                    <Search className="w-3 h-3" />
+                    {editCustomExerciseName ? 'Cambiar ejercicio' : 'Abrir Catálogo'}
+                  </button>
                 </div>
                 <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1">O nombre personalizado</label>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Nombre del ejercicio</label>
                   <input
                     type="text"
                     placeholder="Ej: Sentadilla profunda"
                     value={editCustomExerciseName}
-                    onChange={(e) => {
-                      setEditCustomExerciseName(e.target.value);
-                      if (e.target.value) setEditSelectedPreset('');
-                    }}
+                    onChange={(e) => setEditCustomExerciseName(e.target.value)}
                     className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] text-[#a1a1aa] mb-1">Grupo Muscular</label>
-                <select
-                  value={editExerciseCategory}
-                  onChange={(e) => setEditExerciseCategory(e.target.value as Exercise['category'])}
-                  className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]"
-                >
-                  <option value="Chest">Pecho</option>
-                  <option value="Back">Espalda</option>
-                  <option value="Legs">Piernas</option>
-                  <option value="Shoulders">Hombros</option>
-                  <option value="Arms">Brazos</option>
-                  <option value="Core">Core</option>
-                  <option value="Cardio">Cardio</option>
-                  <option value="Traps">Trapecios</option>
-                  <option value="Glutes">Glúteos</option>
-                  <option value="Forearms">Antebrazos</option>
-                  <option value="Full Body">Cuerpo Completo</option>
-                   <option value="Home Workout">En Casa</option>
-                 </select>
-               </div>
-             </div>
+                  <select
+                    value={editExerciseCategory}
+                    onChange={(e) => setEditExerciseCategory(e.target.value as Exercise['category'])}
+                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                  >
+                    <option value="Chest">Pecho</option>
+                    <option value="Back">Espalda</option>
+                    <option value="Legs">Piernas</option>
+                    <option value="Shoulders">Hombros</option>
+                    <option value="Biceps">Bíceps</option>
+                    <option value="Triceps">Tríceps</option>
+                    <option value="Arms">Brazos</option>
+                    <option value="Core">Core</option>
+                    <option value="Cardio">Cardio</option>
+                    <option value="Traps">Trapecios</option>
+                    <option value="Glutes">Glúteos</option>
+                    <option value="Forearms">Antebrazos</option>
+                    <option value="Full Body">Cuerpo Completo</option>
+                    <option value="Home Workout">En Casa</option>
+                  </select>
+                </div>
+              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="md:col-span-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[10px] text-[#a1a1aa]">Series Individuales (Reps · Peso)</label>
-                    <div className="flex items-center gap-2">
+              {/* Toolbar Series + Descanso */}
+              <div className="bg-[#18181b] border border-[#27272a] rounded-[12px] p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <label className="text-[10px] text-[#a1a1aa] font-bold">Series</label>
+                    <div className="flex items-center gap-1.5 bg-[#0a0a0c] rounded-[8px] p-0.5 border border-[#27272a]">
                       <button
                         type="button"
                         onClick={() => {
@@ -1875,11 +1910,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                             setEditExerciseSets(next.length);
                           }
                         }}
-                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#8e8e93] rounded-[4px] text-[10px] hover:text-white active:scale-95 transition-all"
+                        className="w-7 h-7 flex items-center justify-center bg-[#27272a] text-[#8e8e93] rounded-[6px] text-xs hover:text-white active:scale-95 transition-all"
                       >
                         −
                       </button>
-                      <span className="text-[10px] text-white font-bold w-4 text-center">{editExerciseSetDetails.length}</span>
+                      <span className="text-xs text-white font-bold w-5 text-center">{editExerciseSetDetails.length}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1888,53 +1923,53 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                           setEditExerciseSetDetails(next);
                           setEditExerciseSets(next.length);
                         }}
-                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] text-[#d4f826] rounded-[4px] text-[10px] hover:bg-[#3f3f46] active:scale-95 transition-all"
+                        className="w-7 h-7 flex items-center justify-center bg-[#27272a] text-[#d4f826] rounded-[6px] text-xs hover:bg-[#3f3f46] active:scale-95 transition-all"
                       >
                         +
                       </button>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    {editExerciseSetDetails.map((s, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-[9px] text-[#8e8e93] w-5 text-right font-bold">{i + 1}</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder="Reps"
-                          value={s.reps || ''}
-                          onChange={(e) => {
-                            const v = e.target.value.replace(/[^0-9]/g, '');
-                            const next = [...editExerciseSetDetails];
-                            next[i] = { ...next[i], reps: v === '' ? 0 : Number(v) };
-                            setEditExerciseSetDetails(next);
-                          }}
-                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
-                        />
-                        <span className="text-[9px] text-[#8e8e93]">reps</span>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder="Peso"
-                          value={s.weight || ''}
-                          onChange={(e) => {
-                            const v = e.target.value.replace(/[^0-9]/g, '');
-                            const next = [...editExerciseSetDetails];
-                            next[i] = { ...next[i], weight: v === '' ? 0 : Number(v) };
-                            setEditExerciseSetDetails(next);
-                          }}
-                          className="w-16 bg-[#18181b] border border-[#27272a] rounded-[8px] text-xs p-1.5 text-white focus:outline-none focus:border-[#d4f826] text-center"
-                        />
-                        <span className="text-[9px] text-[#8e8e93]">kg</span>
-                      </div>
-                    ))}
+
+                  <div className="flex items-center gap-2">
+                    <Timer className="w-3.5 h-3.5 text-[#8e8e93]" />
+                    <label className="text-[10px] text-[#a1a1aa] font-bold">Descanso</label>
+                    <div className="flex items-center bg-[#0a0a0c] rounded-[8px] border border-[#27272a] overflow-hidden">
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={editExerciseRest || ''}
+                        onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setEditExerciseRest(v === '' ? 0 : Number(v)); }}
+                        className="w-14 bg-transparent text-xs p-1.5 text-white text-center focus:outline-none"
+                      />
+                      <span className="text-[9px] text-[#8e8e93] pr-2">s</span>
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Descanso (s)</label>
-                  <input type="text" inputMode="numeric" pattern="[0-9]*" value={editExerciseRest || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setEditExerciseRest(v === '' ? 0 : Number(v)); }} className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]" />
+
+                {/* Grid de series */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {editExerciseSetDetails.map((s, i) => (
+                    <div key={i} className="bg-[#141416] border border-[#27272a] rounded-[8px] p-2 flex items-center gap-2">
+                      <span className="text-[9px] text-[#8e8e93] font-bold w-4 text-center">{i + 1}</span>
+                      <div className="flex-1 flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Reps" value={s.reps || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...editExerciseSetDetails]; next[i] = { ...next[i], reps: v === '' ? 0 : Number(v) }; setEditExerciseSetDetails(next); }}
+                            className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[10px] p-1 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                          />
+                          <span className="text-[8px] text-[#8e8e93]">reps</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="text" inputMode="numeric" pattern="[0-9]*" placeholder="Peso" value={s.weight || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); const next = [...editExerciseSetDetails]; next[i] = { ...next[i], weight: v === '' ? 0 : Number(v) }; setEditExerciseSetDetails(next); }}
+                            className="w-full bg-[#0a0a0c] border border-[#27272a] rounded-[6px] text-[10px] p-1 text-white focus:outline-none focus:border-[#d4f826] text-center"
+                          />
+                          <span className="text-[8px] text-[#8e8e93]">kg</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -2094,6 +2129,22 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
             onUpdateClient(measurementsClientId, { age: a });
           }
         }}
+      />
+
+      {/* Modales del catálogo de ejercicios */}
+      <ExerciseSelectorModal
+        isOpen={showExerciseSelector}
+        onClose={() => setShowExerciseSelector(false)}
+        onSelect={handleSelectPreset}
+        presets={globalPresets}
+        presetsLoading={presetsLoading}
+      />
+      <ExerciseSelectorModal
+        isOpen={showEditExerciseSelector}
+        onClose={() => setShowEditExerciseSelector(false)}
+        onSelect={handleSelectEditPreset}
+        presets={globalPresets}
+        presetsLoading={presetsLoading}
       />
     </div>
   );
