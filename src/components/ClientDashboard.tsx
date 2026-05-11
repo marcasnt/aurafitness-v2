@@ -3,7 +3,8 @@ import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, Chevron
 import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
 import MeasurementsModal from './MeasurementsModal';
-import { WeightChart, BodyMeasurementsChart, BicepsChart, MeasurementCards, WorkoutHistoryChart } from './ProgressCharts';
+import { MeasurementCards, WorkoutHistoryChart } from './ProgressCharts';
+import ProgressLineChart from './ProgressLineChart';
 import { getBodyFatColor } from '../lib/bodyFatCalculator';
 
 interface Props {
@@ -353,35 +354,8 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
               gender={client.gender}
             />
 
-            {/* Weight Chart */}
-            {client.weightHistory && client.weightHistory.length > 1 && (
-              <WeightChart data={client.weightHistory} />
-            )}
-
-            {/* Body Measurements Chart */}
-            {client.measurementsHistory && client.measurementsHistory.length > 1 && (
-              <BodyMeasurementsChart
-                data={client.measurementsHistory.map(m => ({
-                  date: m.date,
-                  waist: m.waist || undefined,
-                  hips: m.hips || undefined,
-                  neck: m.neck || undefined,
-                  thighsLeft: (m as any).thighsLeft || undefined,
-                  thighsRight: (m as any).thighsRight || undefined,
-                }))}
-              />
-            )}
-
-            {/* Biceps Chart */}
-            {client.measurementsHistory && client.measurementsHistory.length > 0 && (
-              <BicepsChart
-                data={client.measurementsHistory.map(m => ({
-                  date: m.date,
-                  bicepsLeft: m.bicepsLeft || undefined,
-                  bicepsRight: m.bicepsRight || undefined,
-                }))}
-              />
-            )}
+            {/* Interactive Progress Chart */}
+            <ProgressLineChart user={client} title="Tu Evolución" />
 
             {/* Quick Weight Entry */}
             <div className="bg-[#141416] border border-[#27272a] rounded-[12px] p-4">

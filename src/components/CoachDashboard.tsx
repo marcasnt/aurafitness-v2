@@ -9,7 +9,8 @@ import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types/fitness';
 import { clientsService, exercisesService, storageService } from '../lib/supabase-auth';
 import MeasurementsModal from './MeasurementsModal';
-import { MeasurementCards, WeightChart, BodyMeasurementsChart, BicepsChart } from './ProgressCharts';
+import { MeasurementCards } from './ProgressCharts';
+import ProgressLineChart from './ProgressLineChart';
 import { calculateBodyFat } from '../lib/bodyFatCalculator';
 
 interface CoachDashboardProps {
@@ -1227,31 +1228,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       gender={selectedClient.gender}
                     />
 
-                    {selectedClient.weightHistory && selectedClient.weightHistory.length > 1 && (
-                      <WeightChart data={selectedClient.weightHistory} />
-                    )}
-
-                    {selectedClient.measurementsHistory && selectedClient.measurementsHistory.length > 1 && (
-                      <BodyMeasurementsChart
-                        data={selectedClient.measurementsHistory.map(m => ({
-                          date: m.date,
-                          waist: m.waist || undefined,
-                          hips: m.hips || undefined,
-                          neck: m.neck || undefined,
-                          thighs: m.thighs || undefined,
-                        }))}
-                      />
-                    )}
-
-                    {selectedClient.measurementsHistory && selectedClient.measurementsHistory.length > 0 && (
-                      <BicepsChart
-                        data={selectedClient.measurementsHistory.map(m => ({
-                          date: m.date,
-                          bicepsLeft: m.bicepsLeft || undefined,
-                          bicepsRight: m.bicepsRight || undefined,
-                        }))}
-                      />
-                    )}
+                    <ProgressLineChart user={selectedClient} title="Evolución del Atleta" />
 
                     {/* Weight History Grid */}
                     <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4">
