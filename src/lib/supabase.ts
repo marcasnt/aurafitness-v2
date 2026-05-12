@@ -71,6 +71,8 @@ export type Database = {
           notes: string | null;
           image_url: string | null;
           sort_order: number;
+          superset_group: string | null;
+          superset_order: number;
           created_at: string;
           updated_at: string;
         };

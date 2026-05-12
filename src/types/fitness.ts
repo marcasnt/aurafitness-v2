@@ -63,6 +63,8 @@ export interface Exercise {
   notes?: string;
   imageUrl?: string; // Imagen o GIF demostrativo del ejercicio
   sortOrder?: number; // Orden dentro del día de rutina
+  supersetGroup?: string; // "A", "B", "C"... null si es individual
+  supersetOrder?: number; // 1, 2, 3... orden dentro del grupo
 }
 
 export interface RoutineDay {

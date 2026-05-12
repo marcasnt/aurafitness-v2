@@ -50,6 +50,8 @@ const mapRoutineToRoutineDay = (r: Routine, exercises: Exercise[]): RoutineDay =
     notes: e.notes || undefined,
     imageUrl: e.image_url || undefined,
     sortOrder: e.sort_order,
+    supersetGroup: e.superset_group || undefined,
+    supersetOrder: e.superset_order,
   })),
   createdAt: r.created_at.split('T')[0],
 });
@@ -353,6 +355,8 @@ export const exercisesService = {
         notes: exercise.notes || null,
         image_url: exercise.imageUrl || null,
         sort_order: 0,
+        superset_group: exercise.supersetGroup || null,
+        superset_order: exercise.supersetOrder || 0,
       })
       .select()
       .single();
@@ -372,6 +376,8 @@ export const exercisesService = {
     if (updates.notes !== undefined) updateData.notes = updates.notes || null;
     if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl || null;
     if (updates.sortOrder !== undefined) updateData.sort_order = updates.sortOrder;
+    if (updates.supersetGroup !== undefined) updateData.superset_group = updates.supersetGroup || null;
+    if (updates.supersetOrder !== undefined) updateData.superset_order = updates.supersetOrder;
 
     const { error } = await supabase.from('exercises').update(updateData).eq('id', id);
     if (error) throw error;

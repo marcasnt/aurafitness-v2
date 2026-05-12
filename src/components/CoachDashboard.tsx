@@ -148,6 +148,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [exerciseImageMode, setExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
   const [catalogSearch, setCatalogSearch] = useState('');
   const exerciseImageInputRef = useRef<HTMLInputElement>(null);
+  const [exerciseSupersetGroup, setExerciseSupersetGroup] = useState<string>('');
+  const [exerciseSupersetOrder, setExerciseSupersetOrder] = useState<number>(0);
 
   // Exercise Selector Modal State
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
@@ -178,6 +180,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [editExerciseImageMode, setEditExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
   const [editExerciseImageFile, setEditExerciseImageFile] = useState<File | null>(null);
   const [editExerciseSetDetails, setEditExerciseSetDetails] = useState<{ reps: number; weight: number }[]>([]);
+  const [editExerciseSupersetGroup, setEditExerciseSupersetGroup] = useState<string>('');
+  const [editExerciseSupersetOrder, setEditExerciseSupersetOrder] = useState<number>(0);
 
   // Measurements modal
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
@@ -420,7 +424,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       setDetails: exerciseSetDetails,
       restTime: exerciseRest,
       notes: exerciseNotes,
-      imageUrl: finalImageUrl || undefined
+      imageUrl: finalImageUrl || undefined,
+      supersetGroup: exerciseSupersetGroup || undefined,
+      supersetOrder: exerciseSupersetGroup ? exerciseSupersetOrder : undefined,
     };
 
     onAddExercise(routineDayId, newExercise);
@@ -437,6 +443,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setExerciseSets(4);
     setExerciseImageUrl('');
     setExerciseImageFile(null);
+    setExerciseSupersetGroup('');
+    setExerciseSupersetOrder(0);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
@@ -519,6 +527,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setEditExerciseImageUrl(exercise.imageUrl || '');
     setEditExerciseImageMode(exercise.imageUrl ? 'url' : 'url');
     setEditExerciseImageFile(null);
+    setEditExerciseSupersetGroup(exercise.supersetGroup || '');
+    setEditExerciseSupersetOrder(exercise.supersetOrder || 0);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
@@ -550,6 +560,12 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     const origSetDetails = JSON.stringify(exercise.setDetails || []);
     const newSetDetails = JSON.stringify(editExerciseSetDetails);
     if (newSetDetails !== origSetDetails) updates.setDetails = editExerciseSetDetails;
+    if (editExerciseSupersetGroup !== (exercise.supersetGroup || '')) {
+      updates.supersetGroup = editExerciseSupersetGroup || undefined;
+    }
+    if (editExerciseSupersetOrder !== (exercise.supersetOrder || 0)) {
+      updates.supersetOrder = editExerciseSupersetGroup ? editExerciseSupersetOrder : undefined;
+    }
 
     if (Object.keys(updates).length > 0) {
       onUpdateExercise(routineId, exercise.id, updates);
@@ -1279,80 +1295,116 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                               <p className="text-xs text-[#52525b] italic p-2 text-center">No hay ejercicios cargados para este dia.</p>
                             ) : (
                               <div className="grid gap-3">
-                                {routine.exercises.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)).map((ex, idx, arr) => (
-                                  <div key={ex.id} className="bg-[#0a0a0c] border border-[#27272a] rounded-[12px] overflow-hidden flex flex-col sm:flex-row">
-                                    {/* Exercise Image */}
-                                    {ex.imageUrl ? (
-                                      <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416]">
-                                        <img
-                                          src={ex.imageUrl}
-                                          alt={ex.name}
-                                          className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">
-                                          #{idx + 1}
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416] flex items-center justify-center">
-                                        <Dumbbell className="w-8 h-8 text-[#27272a]" />
-                                        <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">
-                                          #{idx + 1}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Exercise Details */}
-                                    <div className="flex-1 p-3 flex flex-col justify-between">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div>
-                                          <h5 className="text-xs font-bold text-white truncate">{ex.name}</h5>
-                                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                            <span className="bg-[#1c1c1f] text-[#8e8e93] text-[9px] px-1.5 py-0.5 rounded-[4px]">{ex.category}</span>
-                                            <span className="text-[10px] text-white">{ex.sets} x {ex.reps}</span>
-                                            <span className="text-[10px] text-[#d4f826] font-bold">{ex.weight} kg</span>
-                                            <span className="text-[10px] text-[#8e8e93]">{ex.restTime}s</span>
+                                {(() => {
+                                  const sorted = routine.exercises.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                                  const groups: { type: 'superset' | 'single'; group?: string; exercises: typeof sorted }[] = [];
+                                  for (const ex of sorted) {
+                                    if (ex.supersetGroup) {
+                                      const last = groups[groups.length - 1];
+                                      if (last && last.type === 'superset' && last.group === ex.supersetGroup) {
+                                        last.exercises.push(ex);
+                                      } else {
+                                        groups.push({ type: 'superset', group: ex.supersetGroup, exercises: [ex] });
+                                      }
+                                    } else {
+                                      groups.push({ type: 'single', exercises: [ex] });
+                                    }
+                                  }
+                                  return groups.map((group, gIdx) => {
+                                    if (group.type === 'superset') {
+                                      return (
+                                        <div key={`ss-${group.group}-${gIdx}`} className="bg-[#0a0a0c] border border-[#d4f826]/30 rounded-[12px] overflow-hidden relative">
+                                          <div className="bg-[#d4f826]/10 px-3 py-1.5 border-b border-[#d4f826]/20 flex items-center gap-2">
+                                            <span className="text-[10px] font-bold text-[#d4f826] uppercase tracking-wider">SUPERSET {group.group}</span>
+                                            <span className="text-[9px] text-[#8e8e93]">{group.exercises.length} ejercicios • {group.exercises[0]?.sets} series</span>
+                                          </div>
+                                          <div className="p-3 space-y-2">
+                                            {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex, idx, arr) => (
+                                              <div key={ex.id} className="bg-[#141416] border border-[#27272a] rounded-[10px] overflow-hidden flex flex-col sm:flex-row">
+                                                {/* Exercise Image */}
+                                                {ex.imageUrl ? (
+                                                  <div className="sm:w-32 h-24 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416]">
+                                                    <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
+                                                    <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">
+                                                      {ex.supersetOrder}º
+                                                    </div>
+                                                  </div>
+                                                ) : (
+                                                  <div className="sm:w-32 h-24 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416] flex items-center justify-center">
+                                                    <Dumbbell className="w-8 h-8 text-[#27272a]" />
+                                                    <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">
+                                                      {ex.supersetOrder}º
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                {/* Exercise Details */}
+                                                <div className="flex-1 p-3 flex flex-col justify-between">
+                                                  <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                      <h5 className="text-xs font-bold text-white truncate">{ex.name}</h5>
+                                                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                        <span className="bg-[#1c1c1f] text-[#8e8e93] text-[9px] px-1.5 py-0.5 rounded-[4px]">{ex.category}</span>
+                                                        <span className="text-[10px] text-white">{ex.sets} x {ex.reps}</span>
+                                                        <span className="text-[10px] text-[#d4f826] font-bold">{ex.weight} kg</span>
+                                                        <span className="text-[10px] text-[#8e8e93]">{ex.restTime}s</span>
+                                                      </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                      <button onClick={() => onReorderExercises(routine.id, ex.id, 'up')} disabled={idx === 0} className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all" title="Mover arriba"><ArrowUp className="w-3.5 h-3.5" /></button>
+                                                      <button onClick={() => onReorderExercises(routine.id, ex.id, 'down')} disabled={idx === arr.length - 1} className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all" title="Mover abajo"><ArrowDown className="w-3.5 h-3.5" /></button>
+                                                      <button onClick={() => openEditExerciseModal(routine.id, ex)} className="text-[#3f3f46] hover:text-[#d4f826] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all" title="Editar ejercicio"><Pencil className="w-3.5 h-3.5" /></button>
+                                                      <button onClick={() => onDeleteExercise(routine.id, ex.id)} className="text-[#3f3f46] hover:text-[#ff5449] p-1 rounded-[6px] hover:bg-[#ff5449]/10 transition-all" title="Eliminar ejercicio"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                    </div>
+                                                  </div>
+                                                  {ex.notes && <p className="text-[10px] text-[#e5ba73] mt-2">{ex.notes}</p>}
+                                                </div>
+                                              </div>
+                                            ))}
                                           </div>
                                         </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <button
-                                            onClick={() => onReorderExercises(routine.id, ex.id, 'up')}
-                                            disabled={idx === 0}
-                                            className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
-                                            title="Mover arriba"
-                                          >
-                                            <ArrowUp className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => onReorderExercises(routine.id, ex.id, 'down')}
-                                            disabled={idx === arr.length - 1}
-                                            className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
-                                            title="Mover abajo"
-                                          >
-                                            <ArrowDown className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => openEditExerciseModal(routine.id, ex)}
-                                            className="text-[#3f3f46] hover:text-[#d4f826] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all"
-                                            title="Editar ejercicio"
-                                          >
-                                            <Pencil className="w-3.5 h-3.5" />
-                                          </button>
-                                          <button
-                                            onClick={() => onDeleteExercise(routine.id, ex.id)}
-                                            className="text-[#3f3f46] hover:text-[#ff5449] p-1 rounded-[6px] hover:bg-[#ff5449]/10 transition-all"
-                                            title="Eliminar ejercicio"
-                                          >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                          </button>
+                                      );
+                                    }
+                                    const ex = group.exercises[0];
+                                    const idx = sorted.indexOf(ex);
+                                    return (
+                                      <div key={ex.id} className="bg-[#0a0a0c] border border-[#27272a] rounded-[12px] overflow-hidden flex flex-col sm:flex-row">
+                                        {/* Exercise Image */}
+                                        {ex.imageUrl ? (
+                                          <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416]">
+                                            <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
+                                            <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">#{idx + 1}</div>
+                                          </div>
+                                        ) : (
+                                          <div className="sm:w-36 h-28 sm:h-auto relative overflow-hidden shrink-0 bg-[#141416] flex items-center justify-center">
+                                            <Dumbbell className="w-8 h-8 text-[#27272a]" />
+                                            <div className="absolute top-1.5 left-1.5 bg-black/70 text-[#d4f826] text-[9px] font-bold px-1.5 py-0.5 rounded-[4px]">#{idx + 1}</div>
+                                          </div>
+                                        )}
+                                        {/* Exercise Details */}
+                                        <div className="flex-1 p-3 flex flex-col justify-between">
+                                          <div className="flex items-start justify-between gap-2">
+                                            <div>
+                                              <h5 className="text-xs font-bold text-white truncate">{ex.name}</h5>
+                                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                <span className="bg-[#1c1c1f] text-[#8e8e93] text-[9px] px-1.5 py-0.5 rounded-[4px]">{ex.category}</span>
+                                                <span className="text-[10px] text-white">{ex.sets} x {ex.reps}</span>
+                                                <span className="text-[10px] text-[#d4f826] font-bold">{ex.weight} kg</span>
+                                                <span className="text-[10px] text-[#8e8e93]">{ex.restTime}s</span>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                              <button onClick={() => onReorderExercises(routine.id, ex.id, 'up')} disabled={idx === 0} className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all" title="Mover arriba"><ArrowUp className="w-3.5 h-3.5" /></button>
+                                              <button onClick={() => onReorderExercises(routine.id, ex.id, 'down')} disabled={idx === sorted.length - 1} className="text-[#3f3f46] hover:text-[#d4f826] disabled:text-[#18181b] disabled:hover:text-[#18181b] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all" title="Mover abajo"><ArrowDown className="w-3.5 h-3.5" /></button>
+                                              <button onClick={() => openEditExerciseModal(routine.id, ex)} className="text-[#3f3f46] hover:text-[#d4f826] p-1 rounded-[6px] hover:bg-[#d4f826]/10 transition-all" title="Editar ejercicio"><Pencil className="w-3.5 h-3.5" /></button>
+                                              <button onClick={() => onDeleteExercise(routine.id, ex.id)} className="text-[#3f3f46] hover:text-[#ff5449] p-1 rounded-[6px] hover:bg-[#ff5449]/10 transition-all" title="Eliminar ejercicio"><Trash2 className="w-3.5 h-3.5" /></button>
+                                            </div>
+                                          </div>
+                                          {ex.notes && <p className="text-[10px] text-[#e5ba73] mt-2">{ex.notes}</p>}
                                         </div>
                                       </div>
-                                      {ex.notes && (
-                                        <p className="text-[10px] text-[#e5ba73] mt-2">{ex.notes}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
+                                    );
+                                  });
+                                })()}
                               </div>
                             )}
 
@@ -1408,6 +1460,37 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                     <option value="Home Workout">En Casa</option>
                                   </select>
                                 </div>
+                              </div>
+
+                              {/* Fila Superset */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Superset (opcional)</label>
+                                  <select
+                                    value={exerciseSupersetGroup}
+                                    onChange={(e) => { const g = e.target.value; setExerciseSupersetGroup(g); setExerciseSupersetOrder(g ? 1 : 0); }}
+                                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                                  >
+                                    <option value="">Ninguno</option>
+                                    {['A','B','C','D','E','F','G','H'].map(g => (
+                                      <option key={g} value={g}>Grupo {g}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                {exerciseSupersetGroup && (
+                                  <div>
+                                    <label className="block text-[10px] text-[#a1a1aa] mb-1">Orden en grupo</label>
+                                    <select
+                                      value={exerciseSupersetOrder}
+                                      onChange={(e) => setExerciseSupersetOrder(Number(e.target.value))}
+                                      className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                                    >
+                                      <option value={1}>1º</option>
+                                      <option value={2}>2º</option>
+                                      <option value={3}>3º</option>
+                                    </select>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Toolbar Series + Descanso */}
@@ -2078,6 +2161,37 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                     <option value="Home Workout">En Casa</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Fila Superset */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-[#a1a1aa] mb-1">Superset (opcional)</label>
+                  <select
+                    value={editExerciseSupersetGroup}
+                    onChange={(e) => { const g = e.target.value; setEditExerciseSupersetGroup(g); setEditExerciseSupersetOrder(g ? 1 : 0); }}
+                    className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                  >
+                    <option value="">Ninguno</option>
+                    {['A','B','C','D','E','F','G','H'].map(g => (
+                      <option key={g} value={g}>Grupo {g}</option>
+                    ))}
+                  </select>
+                </div>
+                {editExerciseSupersetGroup && (
+                  <div>
+                    <label className="block text-[10px] text-[#a1a1aa] mb-1">Orden en grupo</label>
+                    <select
+                      value={editExerciseSupersetOrder}
+                      onChange={(e) => setEditExerciseSupersetOrder(Number(e.target.value))}
+                      className="w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2 focus:outline-none focus:border-[#d4f826] text-white"
+                    >
+                      <option value={1}>1º</option>
+                      <option value={2}>2º</option>
+                      <option value={3}>3º</option>
+                    </select>
+                  </div>
+                )}
               </div>
 
               {/* Toolbar Series + Descanso */}

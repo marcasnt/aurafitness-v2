@@ -168,7 +168,17 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   const tog = (eid: string, si: number, rest: number, chk: boolean) => {
     const k = `${eid}-${si}`;
     setCs(p => ({...p,[k]:chk}));
-    if (chk && rest > 0) startTimer(rest);
+    if (chk && rest > 0 && ar) {
+      const ex = ar.exercises.find(e => e.id === eid);
+      if (!ex) return;
+      if (!ex.supersetGroup) {
+        startTimer(rest);
+      } else {
+        const groupExercises = ar.exercises.filter(e => e.supersetGroup === ex.supersetGroup);
+        const allCompleted = groupExercises.every(gex => cs[`${gex.id}-${si}`] || gex.id === eid);
+        if (allCompleted) startTimer(rest);
+      }
+    }
   };
 
   const gr = (ex: any, si: number) => {
@@ -195,7 +205,30 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
     onUpdateClientStreak(client.id,(client.streak||0)+1);
 
     // Resumen de última serie de cada ejercicio para el coach
-    const summaryLines = el.map(ex => {
+    const exercisesByGroup: { group?: string; exercises: typeof el }[] = [];
+    for (const ex of el) {
+      const origEx = ar.exercises.find(e => e.id === ex.exerciseId);
+      if (origEx?.supersetGroup) {
+        const last = exercisesByGroup[exercisesByGroup.length - 1];
+        if (last && last.group === origEx.supersetGroup) {
+          last.exercises.push(ex);
+        } else {
+          exercisesByGroup.push({ group: origEx.supersetGroup, exercises: [ex] });
+        }
+      } else {
+        exercisesByGroup.push({ exercises: [ex] });
+      }
+    }
+
+    const summaryLines = exercisesByGroup.map(g => {
+      if (g.group) {
+        const exLines = g.exercises.map(ex => {
+          const lastSet = [...ex.sets].reverse().find(s => s.completed) || ex.sets[ex.sets.length - 1];
+          return `  • ${ex.exerciseName}: ${lastSet.reps} reps × ${lastSet.weight}kg`;
+        }).join('\n');
+        return `SUPERSET ${g.group}:\n${exLines}`;
+      }
+      const ex = g.exercises[0];
       const lastSet = [...ex.sets].reverse().find(s => s.completed) || ex.sets[ex.sets.length - 1];
       return `• ${ex.exerciseName}: ${lastSet.reps} reps × ${lastSet.weight}kg`;
     });
