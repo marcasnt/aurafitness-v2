@@ -2335,11 +2335,11 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       {/* Avatar Lightbox */}
       {selectedClient && avatarLightbox && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6" onClick={() => setAvatarLightbox(false)}>
-          <div className="relative">
+          <div className="relative max-w-[420px] w-full">
             <img
               src={selectedClient.selfieUrl || selectedClient.avatar}
               alt={selectedClient.name}
-              className="w-64 h-64 rounded-full object-cover border-4 border-[#d4f826]"
+              className="w-full rounded-[16px] object-contain border-4 border-[#d4f826]"
             />
             <button
               onClick={() => setAvatarLightbox(false)}
