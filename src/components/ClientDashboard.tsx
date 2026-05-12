@@ -49,6 +49,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarLightbox, setAvatarLightbox] = useState(false);
 
   // Wake Lock — mantiene pantalla despierta durante entreno
   const isWorkoutActive = selectedRoutineId !== null;
@@ -280,22 +281,27 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
 
       <header className="bg-[#141416] border-b border-[#27272a] px-5 py-4 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          {/* Avatar con opción de cambiar foto */}
+          {/* Avatar con lightbox y cambio de foto */}
           <div className="relative">
-            <div className="relative group cursor-pointer" onClick={() => !avatarPreview && avatarInputRef.current?.click()} title={avatarPreview ? 'Vista previa' : 'Cambiar mi foto de perfil'}>
+            <div className="relative group cursor-pointer" onClick={() => !avatarPreview && setAvatarLightbox(true)} title="Ver foto ampliada">
               <img src={avatarPreview || client.selfieUrl || client.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100'} alt="" className={`w-11 h-11 rounded-full object-cover border-2 transition-all ${avatarPreview ? 'border-[#e5ba73]' : 'border-[#d4f826] group-hover:border-[#e2fa52]'}`} />
               {!avatarPreview && (
-                <>
-                  <div className="absolute inset-0 rounded-full bg-[#0a0a0c]/80 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                    <Camera className="w-4 h-4 text-[#d4f826]" />
-                    <span className="text-[7px] text-white  font-bold mt-0.5">CAMBIAR</span>
-                  </div>
-                  <div className="absolute -bottom-0.5 -right-0.5 bg-[#d4f826] rounded-full p-0.5 ">
-                    <Camera className="w-2.5 h-2.5 text-black" />
-                  </div>
-                </>
+                <div className="absolute inset-0 rounded-full bg-[#0a0a0c]/80 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                  <Camera className="w-4 h-4 text-[#d4f826]" />
+                  <span className="text-[7px] text-white font-bold mt-0.5">VER</span>
+                </div>
               )}
             </div>
+            {/* Botón cámara para cambiar foto */}
+            {!avatarPreview && (
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute -bottom-0.5 -right-0.5 bg-[#d4f826] rounded-full p-0.5 hover:bg-[#e2fa52] transition-colors z-10"
+                title="Cambiar foto"
+              >
+                <Camera className="w-2.5 h-2.5 text-black" />
+              </button>
+            )}
             {avatarPreview && (
               <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-[#141416] border border-[#27272a] rounded-[8px] p-0.5 shadow-lg z-50">
                 <button onClick={confirmAvatarUpload} className="text-[#25d366] hover:bg-[#25d366]/10 p-1 rounded-[4px] transition-all" title="Confirmar">
@@ -651,6 +657,10 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
 
       {sm&&(<div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50"><div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-4 md:p-6 relative">{!ok?(<><div className="text-center mb-4"><div className="inline-flex p-2.5 bg-[#d4f826]/10 text-[#d4f826] rounded-[12px] border border-[#d4f826]/20 mb-2"><Trophy className="w-5 h-5"/></div><h3 className="text-base font-bold  text-white uppercase">Confirmar Bitácora</h3></div><form onSubmit={fin} className="space-y-4"><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Duración (min)</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={dur || ''} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setDur(v === '' ? 0 : Number(v)); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[12px] text-xs p-2.5 text-white "/>{elapsedMinutes > 0 && <p className="text-[9px] text-[#8e8e93] mt-1">⏱ Tiempo transcurrido: ~{elapsedMinutes} min</p>}</div><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Esfuerzo (RPE)</label><select value={feel} onChange={(e)=>setFeel(Number(e.target.value))} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[12px] text-xs p-2.5 text-white "><option value="5">5/5 Máximo</option><option value="4">4/5 Muy bueno</option><option value="3">3/5 Moderado</option><option value="2">2/5 Descarga</option><option value="1">1/5 Liviano</option></select></div><div><label className="block text-[11px] text-[#8e8e93]  uppercase mb-1">Comentarios</label><textarea placeholder="Notas para el coach..." value={cmt} onChange={(e)=>setCmt(e.target.value)} rows={3} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-[8px] text-xs p-2.5 text-white"/></div><div className="flex gap-2 pt-2"><button type="button" onClick={()=>setSm(false)} className="flex-1 text-[#8e8e93] text-xs py-2.5 rounded-[8px] hover:bg-[#242428] transition-all active:scale-[0.98]">Volver</button><button type="submit" className="flex-1 bg-[#d4f826] text-black font-extrabold text-xs py-2.5 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-[0.98] ">ENVIAR</button></div></form></>):(<div className="text-center py-6 space-y-4"><div className="w-14 h-14 bg-[#25d366]/20 text-[#25d366] rounded-full flex items-center justify-center mx-auto border border-[#25d366]/30"><Trophy className="w-7 h-7"/></div><h3 className="text-lg font-bold  text-white uppercase">¡ENTRENAMIENTO SUBIDO!</h3><p className="text-xs text-[#8e8e93]">Reporte enviado al Coach {coach?.name || 'Marvin'}.</p>{lastSetSummary && (<div className="bg-[#0a0a0c] border border-[#27272a] rounded-[12px] p-3 text-left max-h-40 overflow-y-auto"><p className="text-[10px] text-[#8e8e93] uppercase font-bold mb-2">Últimas series registradas</p><pre className="text-[11px] text-[#d4f826] whitespace-pre-wrap font-mono leading-relaxed">{lastSetSummary}</pre></div>)}<button onClick={resetRoutine} className="w-full bg-[#d4f826] text-black font-bold text-xs py-2.5 rounded-[12px] ">VOLVER A RUTINAS</button></div>)}</div></div>)}
       {fi&&(<div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={()=>setFi(null)}><div className="relative max-w-2xl w-full"><img src={fi} alt="Ejercicio" className="w-full rounded-[16px]"/><button onClick={()=>setFi(null)} className="absolute top-3 right-3 bg-black/70 text-white rounded-full p-2 hover:bg-[#ff5449] transition-all"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button><div className="absolute bottom-3 left-3 right-3 bg-black/70 rounded-[12px] p-3 text-center"><p className="text-xs text-[#d4f826]  font-bold">IMAGEN DEMOSTRATIVA</p><p className="text-[10px] text-[#8e8e93] mt-0.5">Toca fuera para cerrar</p></div></div></div>)}
+
+      {/* Avatar Lightbox */}
+      {avatarLightbox && (<div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6" onClick={()=>setAvatarLightbox(false)}><div className="relative"><img src={client.selfieUrl || client.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'} alt={client.name} className="w-64 h-64 rounded-full object-cover border-4 border-[#d4f826]"/><button onClick={()=>setAvatarLightbox(false)} className="absolute -top-3 -right-3 bg-black/70 text-white rounded-full p-2 hover:bg-[#ff5449] transition-all"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div></div>)}
+
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#141416] border-t border-[#27272a] grid grid-cols-3 text-center text-[10px] text-[#8e8e93] py-1.5 pb-4 z-40">
         <button onClick={()=>setTab('w')} className={`flex flex-col items-center gap-0.5 ${tab==='w'?'text-[#d4f826]':''}`}><Dumbbell className="w-4 h-4"/><span>Rutina</span></button>
         <button onClick={()=>setTab('m')} className={`flex flex-col items-center gap-0.5 ${tab==='m'?'text-[#d4f826]':''}`}><TrendingUp className="w-4 h-4"/><span>Progreso</span></button>

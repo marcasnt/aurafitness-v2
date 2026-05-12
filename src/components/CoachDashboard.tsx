@@ -122,6 +122,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [avatarLightbox, setAvatarLightbox] = useState(false);
 
   const [showAddRoutineModal, setShowAddRoutineModal] = useState(false);
   const [newRoutineName, setNewRoutineName] = useState('');
@@ -886,24 +887,28 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
                       <div className="flex items-start gap-4">
                         <div className="relative">
-                          <div className={`relative group cursor-pointer shrink-0 ${editAvatarPreview ? '' : 'cursor-pointer'}`} onClick={() => !editAvatarPreview && editAvatarInputRef.current?.click()} title={editAvatarPreview ? 'Vista previa' : 'Cambiar foto del cliente'}>
+                          <div className="relative group cursor-pointer shrink-0" onClick={() => !editAvatarPreview && setAvatarLightbox(true)} title="Ver foto ampliada">
                             <img
                               src={editAvatarPreview || selectedClient.selfieUrl || selectedClient.avatar}
                               alt={selectedClient.name}
                               className={`w-16 h-16 rounded-full object-cover border-2 ${editAvatarPreview ? 'border-[#e5ba73]' : 'border-[#d4f826]'}`}
                             />
                             {!editAvatarPreview && (
-                              <>
-                                <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                                  <Camera className="w-5 h-5 text-[#d4f826]" />
-                                  <span className="text-[8px] text-white mt-0.5">CAMBIAR</span>
-                                </div>
-                                <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1">
-                                  <Camera className="w-3 h-3 text-black" />
-                                </div>
-                              </>
+                              <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                <Camera className="w-5 h-5 text-[#d4f826]" />
+                                <span className="text-[8px] text-white mt-0.5">VER</span>
+                              </div>
                             )}
                           </div>
+                          {!editAvatarPreview && (
+                            <button
+                              onClick={() => editAvatarInputRef.current?.click()}
+                              className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1 hover:bg-[#e2fa52] transition-colors z-10"
+                              title="Cambiar foto"
+                            >
+                              <Camera className="w-3 h-3 text-black" />
+                            </button>
+                          )}
                           {editAvatarPreview && (
                             <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[#141416] border border-[#27272a] rounded-[8px] p-1 shadow-lg z-50">
                               <button onClick={confirmEditAvatar} className="text-[#25d366] hover:bg-[#25d366]/10 p-1 rounded-[4px] transition-all" title="Confirmar">
@@ -2326,6 +2331,27 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         presets={globalPresets}
         presetsLoading={presetsLoading}
       />
+
+      {/* Avatar Lightbox */}
+      {selectedClient && avatarLightbox && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6" onClick={() => setAvatarLightbox(false)}>
+          <div className="relative">
+            <img
+              src={selectedClient.selfieUrl || selectedClient.avatar}
+              alt={selectedClient.name}
+              className="w-64 h-64 rounded-full object-cover border-4 border-[#d4f826]"
+            />
+            <button
+              onClick={() => setAvatarLightbox(false)}
+              className="absolute -top-3 -right-3 bg-black/70 text-white rounded-full p-2 hover:bg-[#ff5449] transition-all"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
