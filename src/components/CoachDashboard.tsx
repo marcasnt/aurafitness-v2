@@ -120,6 +120,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [newClientAge, setNewClientAge] = useState('');
   const selfieInputRef = useRef<HTMLInputElement>(null);
   const editAvatarInputRef = useRef<HTMLInputElement>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
 
   const [showAddRoutineModal, setShowAddRoutineModal] = useState(false);
   const [newRoutineName, setNewRoutineName] = useState('');
@@ -237,11 +239,35 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   };
 
   // Handle editar avatar de cliente ya registrado
-  const handleEditClientAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditClientAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedClientId) return;
-    onUploadClientAvatar(selectedClientId, file);
+    if (editAvatarPreview && editAvatarPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(editAvatarPreview);
+    }
+    const url = URL.createObjectURL(file);
+    setEditAvatarFile(file);
+    setEditAvatarPreview(url);
     if (editAvatarInputRef.current) editAvatarInputRef.current.value = '';
+  };
+
+  const confirmEditAvatar = () => {
+    if (editAvatarFile && selectedClientId) {
+      onUploadClientAvatar(selectedClientId, editAvatarFile);
+    }
+    if (editAvatarPreview && editAvatarPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(editAvatarPreview);
+    }
+    setEditAvatarPreview(null);
+    setEditAvatarFile(null);
+  };
+
+  const cancelEditAvatar = () => {
+    if (editAvatarPreview && editAvatarPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(editAvatarPreview);
+    }
+    setEditAvatarPreview(null);
+    setEditAvatarFile(null);
   };
 
   // Handle exercise image upload
@@ -859,19 +885,35 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                       />
 
                       <div className="flex items-start gap-4">
-                        <div className="relative group cursor-pointer shrink-0" onClick={() => editAvatarInputRef.current?.click()} title="Cambiar foto del cliente">
-                          <img
-                            src={selectedClient.selfieUrl || selectedClient.avatar}
-                            alt={selectedClient.name}
-                            className="w-16 h-16 rounded-full object-cover border-2 border-[#d4f826]"
-                          />
-                          <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-                            <Camera className="w-5 h-5 text-[#d4f826]" />
-                            <span className="text-[8px] text-white mt-0.5">CAMBIAR</span>
+                        <div className="relative">
+                          <div className={`relative group cursor-pointer shrink-0 ${editAvatarPreview ? '' : 'cursor-pointer'}`} onClick={() => !editAvatarPreview && editAvatarInputRef.current?.click()} title={editAvatarPreview ? 'Vista previa' : 'Cambiar foto del cliente'}>
+                            <img
+                              src={editAvatarPreview || selectedClient.selfieUrl || selectedClient.avatar}
+                              alt={selectedClient.name}
+                              className={`w-16 h-16 rounded-full object-cover border-2 ${editAvatarPreview ? 'border-[#e5ba73]' : 'border-[#d4f826]'}`}
+                            />
+                            {!editAvatarPreview && (
+                              <>
+                                <div className="absolute inset-0 rounded-full bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
+                                  <Camera className="w-5 h-5 text-[#d4f826]" />
+                                  <span className="text-[8px] text-white mt-0.5">CAMBIAR</span>
+                                </div>
+                                <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1">
+                                  <Camera className="w-3 h-3 text-black" />
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <div className="absolute -bottom-1 -right-1 bg-[#d4f826] rounded-full p-1">
-                            <Camera className="w-3 h-3 text-black" />
-                          </div>
+                          {editAvatarPreview && (
+                            <div className="absolute -bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-[#141416] border border-[#27272a] rounded-[8px] p-1 shadow-lg z-50">
+                              <button onClick={confirmEditAvatar} className="text-[#25d366] hover:bg-[#25d366]/10 p-1 rounded-[4px] transition-all" title="Confirmar">
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button onClick={cancelEditAvatar} className="text-[#ff5449] hover:bg-[#ff5449]/10 p-1 rounded-[4px] transition-all" title="Cancelar">
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
