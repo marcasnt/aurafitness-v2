@@ -123,6 +123,20 @@ export default function App() {
           if (profile && mountedRef.current) {
             setCurrentUser(profile);
           }
+        } else {
+          // Intentar restaurar sesion custom desde sessionStorage
+          try {
+            const raw = sessionStorage.getItem('aura_session');
+            if (raw) {
+              const stored = JSON.parse(raw);
+              const profile = await authService.getClient(stored.userId);
+              if (profile && mountedRef.current) {
+                setCurrentUser(profile);
+              }
+            }
+          } catch (e) {
+            console.error('Session restore error:', e);
+          }
         }
         clearTimeout(timeout);
       } catch (e) {
@@ -195,10 +209,20 @@ export default function App() {
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
+    try {
+      sessionStorage.setItem('aura_session', JSON.stringify({ userId: user.id, role: user.role }));
+    } catch {
+      // ignorar errores de storage
+    }
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    try {
+      sessionStorage.removeItem('aura_session');
+    } catch {
+      // ignorar
+    }
     setCurrentUser(null);
     setClients([]);
     setRoutines([]);

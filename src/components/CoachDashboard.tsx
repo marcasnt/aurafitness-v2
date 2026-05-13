@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { usePersistentState } from '../hooks/usePersistentState';
 import { 
   Users, Calendar, MessageSquare, Plus, Search, Dumbbell, 
   TrendingUp, MessageCircle, Copy, Check, Trash2, Pencil,
@@ -60,15 +61,22 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onAddMeasurementsEntry,
   onLogout,
 }) => {
-  const [activeTab, setActiveTab] = useState<'clients' | 'messages'>('clients');
-  const [clientWorkspaceTab, setClientWorkspaceTab] = useState<'profile' | 'routines' | 'progress'>('profile');
-  const [selectedClientId, setSelectedClientIdState] = useState<string | null>(clients[0]?.id || null);
+  const [activeTab, setActiveTab] = usePersistentState<'clients' | 'messages'>('coach_active_tab', 'clients');
+  const [clientWorkspaceTab, setClientWorkspaceTab] = usePersistentState<'profile' | 'routines' | 'progress'>('coach_workspace_tab', 'profile');
+  const [selectedClientId, setSelectedClientIdState] = useState<string | null>(() => {
+    try {
+      const stored = sessionStorage.getItem('coach_selected_client_id');
+      return stored || null;
+    } catch {
+      return null;
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [clientPasswords, setClientPasswords] = useState<Record<string, string>>({});
   // Guarda el ID de un cliente recien creado para seleccionarlo cuando aparezca en props.clients
   const [pendingSelectClientId, setPendingSelectClientId] = useState<string | null>(null);
   // Accordion: solo un día de rutina expandido a la vez
-  const [expandedRoutineId, setExpandedRoutineId] = useState<string | null>(null);
+  const [expandedRoutineId, setExpandedRoutineId] = usePersistentState<string | null>('coach_expanded_routine', null);
   // Edición inline de datos personales
   const [editingField, setEditingField] = useState<'name' | 'email' | 'phone' | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -95,7 +103,23 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       setSelectedClientIdState(clients[0]?.id || null);
     }
   }, [clients, selectedClientId]);
-  
+
+  // Fallback: si no hay cliente seleccionado pero hay clientes, seleccionar el primero
+  useEffect(() => {
+    if (!selectedClientId && clients.length > 0) {
+      setSelectedClientIdState(clients[0].id);
+    }
+  }, [clients, selectedClientId]);
+
+  // Persistir selectedClientId en sessionStorage
+  useEffect(() => {
+    if (selectedClientId) {
+      sessionStorage.setItem('coach_selected_client_id', selectedClientId);
+    } else {
+      sessionStorage.removeItem('coach_selected_client_id');
+    }
+  }, [selectedClientId]);
+
   // Modals / Form States
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [newClientName, setNewClientName] = useState('');
@@ -130,26 +154,26 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
   // Exercise Form State
   const [selectedPreset, setSelectedPreset] = useState('');
-  const [customExerciseName, setCustomExerciseName] = useState('');
-  const [exerciseCategory, setExerciseCategory] = useState<Exercise['category']>('Chest');
-  const [exerciseSets, setExerciseSets] = useState(4);
-  const [exerciseReps, setExerciseReps] = useState('10-12');
-  const [exerciseWeight, setExerciseWeight] = useState(20);
-  const [exerciseSetDetails, setExerciseSetDetails] = useState<{ reps: number; weight: number }[]>([
+  const [customExerciseName, setCustomExerciseName, clearCustomExerciseName] = usePersistentState('coach_ex_name', '');
+  const [exerciseCategory, setExerciseCategory, clearExerciseCategory] = usePersistentState<Exercise['category']>('coach_ex_cat', 'Chest');
+  const [exerciseSets, setExerciseSets, clearExerciseSets] = usePersistentState('coach_ex_sets', 4);
+  const [exerciseReps, setExerciseReps, clearExerciseReps] = usePersistentState('coach_ex_reps', '10-12');
+  const [exerciseWeight, setExerciseWeight, clearExerciseWeight] = usePersistentState('coach_ex_weight', 20);
+  const [exerciseSetDetails, setExerciseSetDetails, clearExerciseSetDetails] = usePersistentState<{ reps: number; weight: number }[]>('coach_ex_details', [
     { reps: 15, weight: 15 },
     { reps: 12, weight: 20 },
     { reps: 10, weight: 25 },
     { reps: 8, weight: 30 },
   ]);
-  const [exerciseRest, setExerciseRest] = useState(90);
-  const [exerciseNotes, setExerciseNotes] = useState('');
-  const [exerciseImageUrl, setExerciseImageUrl] = useState('');
+  const [exerciseRest, setExerciseRest, clearExerciseRest] = usePersistentState('coach_ex_rest', 90);
+  const [exerciseNotes, setExerciseNotes, clearExerciseNotes] = usePersistentState('coach_ex_notes', '');
+  const [exerciseImageUrl, setExerciseImageUrl, clearExerciseImageUrl] = usePersistentState('coach_ex_img', '');
   const [exerciseImageFile, setExerciseImageFile] = useState<File | null>(null);
-  const [exerciseImageMode, setExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
+  const [exerciseImageMode, setExerciseImageMode, clearExerciseImageMode] = usePersistentState<'url' | 'upload' | 'catalog'>('coach_ex_img_mode', 'url');
   const [catalogSearch, setCatalogSearch] = useState('');
   const exerciseImageInputRef = useRef<HTMLInputElement>(null);
-  const [exerciseSupersetGroup, setExerciseSupersetGroup] = useState<string>('');
-  const [exerciseSupersetOrder, setExerciseSupersetOrder] = useState<number>(0);
+  const [exerciseSupersetGroup, setExerciseSupersetGroup, clearExerciseSupersetGroup] = usePersistentState('coach_ex_ss_group', '');
+  const [exerciseSupersetOrder, setExerciseSupersetOrder, clearExerciseSupersetOrder] = usePersistentState('coach_ex_ss_order', 0);
 
   // Exercise Selector Modal State
   const [showExerciseSelector, setShowExerciseSelector] = useState(false);
@@ -169,19 +193,19 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
   const [editSelectedPreset, setEditSelectedPreset] = useState('');
-  const [editCustomExerciseName, setEditCustomExerciseName] = useState('');
-  const [editExerciseCategory, setEditExerciseCategory] = useState<Exercise['category']>('Chest');
-  const [editExerciseSets, setEditExerciseSets] = useState(4);
-  const [editExerciseReps, setEditExerciseReps] = useState('10-12');
-  const [editExerciseWeight, setEditExerciseWeight] = useState(20);
-  const [editExerciseRest, setEditExerciseRest] = useState(90);
-  const [editExerciseNotes, setEditExerciseNotes] = useState('');
-  const [editExerciseImageUrl, setEditExerciseImageUrl] = useState('');
-  const [editExerciseImageMode, setEditExerciseImageMode] = useState<'url' | 'upload' | 'catalog'>('url');
+  const [editCustomExerciseName, setEditCustomExerciseName, clearEditCustomExerciseName] = usePersistentState('coach_edit_ex_name', '');
+  const [editExerciseCategory, setEditExerciseCategory, clearEditExerciseCategory] = usePersistentState<Exercise['category']>('coach_edit_ex_cat', 'Chest');
+  const [editExerciseSets, setEditExerciseSets, clearEditExerciseSets] = usePersistentState('coach_edit_ex_sets', 4);
+  const [editExerciseReps, setEditExerciseReps, clearEditExerciseReps] = usePersistentState('coach_edit_ex_reps', '10-12');
+  const [editExerciseWeight, setEditExerciseWeight, clearEditExerciseWeight] = usePersistentState('coach_edit_ex_weight', 20);
+  const [editExerciseRest, setEditExerciseRest, clearEditExerciseRest] = usePersistentState('coach_edit_ex_rest', 90);
+  const [editExerciseNotes, setEditExerciseNotes, clearEditExerciseNotes] = usePersistentState('coach_edit_ex_notes', '');
+  const [editExerciseImageUrl, setEditExerciseImageUrl, clearEditExerciseImageUrl] = usePersistentState('coach_edit_ex_img', '');
+  const [editExerciseImageMode, setEditExerciseImageMode, clearEditExerciseImageMode] = usePersistentState<'url' | 'upload' | 'catalog'>('coach_edit_ex_img_mode', 'url');
   const [editExerciseImageFile, setEditExerciseImageFile] = useState<File | null>(null);
-  const [editExerciseSetDetails, setEditExerciseSetDetails] = useState<{ reps: number; weight: number }[]>([]);
-  const [editExerciseSupersetGroup, setEditExerciseSupersetGroup] = useState<string>('');
-  const [editExerciseSupersetOrder, setEditExerciseSupersetOrder] = useState<number>(0);
+  const [editExerciseSetDetails, setEditExerciseSetDetails, clearEditExerciseSetDetails] = usePersistentState<{ reps: number; weight: number }[]>('coach_edit_ex_details', []);
+  const [editExerciseSupersetGroup, setEditExerciseSupersetGroup, clearEditExerciseSupersetGroup] = usePersistentState('coach_edit_ex_ss_group', '');
+  const [editExerciseSupersetOrder, setEditExerciseSupersetOrder, clearEditExerciseSupersetOrder] = usePersistentState('coach_edit_ex_ss_order', 0);
 
   // Measurements modal
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
@@ -431,20 +455,20 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
     onAddExercise(routineDayId, newExercise);
 
-    // Reset exercise input fields
-    setCustomExerciseName('');
-    setExerciseNotes('');
-    setExerciseSetDetails([
-      { reps: 15, weight: 15 },
-      { reps: 12, weight: 20 },
-      { reps: 10, weight: 25 },
-      { reps: 8, weight: 30 },
-    ]);
-    setExerciseSets(4);
-    setExerciseImageUrl('');
+    // Reset exercise input fields + limpiar sessionStorage
+    clearCustomExerciseName();
+    clearExerciseNotes();
+    clearExerciseSetDetails();
+    clearExerciseSets();
+    clearExerciseReps();
+    clearExerciseWeight();
+    clearExerciseRest();
+    clearExerciseImageUrl();
+    clearExerciseImageMode();
+    clearExerciseCategory();
+    clearExerciseSupersetGroup();
+    clearExerciseSupersetOrder();
     setExerciseImageFile(null);
-    setExerciseSupersetGroup('');
-    setExerciseSupersetOrder(0);
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
@@ -572,9 +596,18 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     }
     setEditingExercise(null);
     setEditExerciseImageFile(null);
-    setEditExerciseImageMode('url');
-    setEditExerciseSetDetails([]);
-    setEditCustomExerciseName('');
+    clearEditCustomExerciseName();
+    clearEditExerciseCategory();
+    clearEditExerciseSets();
+    clearEditExerciseReps();
+    clearEditExerciseWeight();
+    clearEditExerciseRest();
+    clearEditExerciseNotes();
+    clearEditExerciseImageUrl();
+    clearEditExerciseImageMode();
+    clearEditExerciseSetDetails();
+    clearEditExerciseSupersetGroup();
+    clearEditExerciseSupersetOrder();
     if (exerciseImageInputRef.current) exerciseImageInputRef.current.value = '';
   };
 
