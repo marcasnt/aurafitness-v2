@@ -304,20 +304,51 @@ export default function App() {
     try {
       const routine = routines.find(r => r.id === routineDayId);
       if (!routine) return;
+
+      // Ordenar por sortOrder actual
       const exercises = [...routine.exercises].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-      const idx = exercises.findIndex(e => e.id === exerciseId);
-      if (idx === -1) return;
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= exercises.length) return;
 
-      const current = exercises[idx];
-      const swap = exercises[swapIdx];
-      const currentSort = current.sortOrder || 0;
-      const swapSort = swap.sortOrder || 0;
+      // Agrupar en bloques: supersets se mueven como unidad
+      const groups: { type: 'superset' | 'single'; group?: string; exercises: typeof exercises }[] = [];
+      for (const ex of exercises) {
+        if (ex.supersetGroup) {
+          const last = groups[groups.length - 1];
+          if (last && last.type === 'superset' && last.group === ex.supersetGroup) {
+            last.exercises.push(ex);
+          } else {
+            groups.push({ type: 'superset', group: ex.supersetGroup, exercises: [ex] });
+          }
+        } else {
+          groups.push({ type: 'single', exercises: [ex] });
+        }
+      }
 
-      await exercisesService.update(current.id, { sortOrder: swapSort });
-      await exercisesService.update(swap.id, { sortOrder: currentSort });
+      // Encontrar el grupo que contiene el ejercicio
+      const groupIdx = groups.findIndex(g => g.exercises.some(e => e.id === exerciseId));
+      if (groupIdx === -1) return;
 
+      const swapIdx = direction === 'up' ? groupIdx - 1 : groupIdx + 1;
+      if (swapIdx < 0 || swapIdx >= groups.length) return;
+
+      // Intercambiar grupos completos
+      const newGroups = [...groups];
+      const temp = newGroups[groupIdx];
+      newGroups[groupIdx] = newGroups[swapIdx];
+      newGroups[swapIdx] = temp;
+
+      // Aplanar y reasignar sortOrder secuencial (0, 1, 2, 3...)
+      const reordered: { id: string; sortOrder: number }[] = [];
+      let order = 0;
+      for (const group of newGroups) {
+        for (const ex of group.exercises) {
+          reordered.push({ id: ex.id, sortOrder: order++ });
+        }
+      }
+
+      // Actualizar todos en paralelo
+      await Promise.all(reordered.map(r => exercisesService.update(r.id, { sortOrder: r.sortOrder })));
+
+      // Refrescar rutinas desde DB
       const clientId = routine.clientId;
       const updated = await routinesService.getByClient(clientId);
       if (mountedRef.current) setRoutines(prev => prev.map(r => {

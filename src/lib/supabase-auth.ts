@@ -342,6 +342,18 @@ export const exercisesService = {
   },
 
   async create(routineId: string, exercise: Omit<FitnessExercise, 'id'>): Promise<Exercise> {
+    // Obtener el max sort_order existente para esta rutina
+    const { data: existing, error: fetchError } = await supabase
+      .from('exercises')
+      .select('sort_order')
+      .eq('routine_id', routineId)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+
+    if (fetchError) throw fetchError;
+
+    const nextSortOrder = (existing && existing.length > 0 ? existing[0].sort_order : -1) + 1;
+
     const { data, error } = await supabase
       .from('exercises')
       .insert({
@@ -354,7 +366,7 @@ export const exercisesService = {
         rest_time: exercise.restTime,
         notes: exercise.notes || null,
         image_url: exercise.imageUrl || null,
-        sort_order: 0,
+        sort_order: nextSortOrder,
         superset_group: exercise.supersetGroup || null,
         superset_order: exercise.supersetOrder || 0,
       })
