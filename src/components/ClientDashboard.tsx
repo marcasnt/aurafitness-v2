@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon, AlertCircle, X } from 'lucide-react';
+import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon, AlertCircle, X, Settings, User as UserIcon } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
 import MeasurementsModal from './MeasurementsModal';
@@ -17,10 +17,11 @@ interface Props {
   onUpdateClientStreak: (id: string, s: number) => void; onAddWeightEntry: (id: string, w: number) => void;
   onAddMeasurementsEntry: (id: string, entry: MeasurementsEntry) => void;
   onUpdateClientAvatar: (id: string, file: File) => void;
+  onChangePassword?: (id: string, currentPassword: string, newPassword: string) => Promise<void>;
   onLogout: () => void;
 }
 
-export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddWeightEntry, onAddMeasurementsEntry, onUpdateClientAvatar, onLogout }) => {
+export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddWeightEntry, onAddMeasurementsEntry, onUpdateClientAvatar, onChangePassword, onLogout }) => {
   const [tab, setTab] = useState<'w'|'m'|'c'>('w');
   const [progressSubTab, setProgressSubTab] = useState<'summary'|'evolution'|'history'>('summary');
   const clientRoutines = routines.filter(r => r.clientId === client.id);
@@ -50,6 +51,16 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarLightbox, setAvatarLightbox] = useState(false);
+
+  // Perfil: cambio de nombre y contraseña
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editName, setEditName] = useState(client.name);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Wake Lock — mantiene pantalla despierta durante entreno
   const isWorkoutActive = selectedRoutineId !== null;
@@ -311,6 +322,58 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
     setAvatarFile(null);
   };
 
+  const handleSaveProfile = async () => {
+    setProfileError('');
+    setProfileSuccess('');
+
+    const nameChanged = editName.trim() !== client.name;
+    const passwordChanged = currentPassword || newPassword || confirmPassword;
+
+    if (!nameChanged && !passwordChanged) {
+      setProfileError('No hay cambios para guardar');
+      return;
+    }
+
+    if (passwordChanged) {
+      if (!currentPassword) { setProfileError('Ingresa tu contraseña actual'); return; }
+      if (!newPassword) { setProfileError('Ingresa la nueva contraseña'); return; }
+      if (newPassword.length < 6) { setProfileError('La nueva contraseña debe tener al menos 6 caracteres'); return; }
+      if (newPassword !== confirmPassword) { setProfileError('Las contraseñas nuevas no coinciden'); return; }
+    }
+
+    setSavingProfile(true);
+    try {
+      if (nameChanged) {
+        await onUpdateClient(client.id, { name: editName.trim() });
+      }
+      if (passwordChanged && onChangePassword) {
+        await onChangePassword(client.id, currentPassword, newPassword);
+      }
+      setProfileSuccess('Perfil actualizado correctamente');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setTimeout(() => {
+        setShowProfileModal(false);
+        setProfileSuccess('');
+      }, 1500);
+    } catch (e: any) {
+      setProfileError(e.message || 'Error al guardar cambios');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const closeProfileModal = () => {
+    setShowProfileModal(false);
+    setProfileError('');
+    setProfileSuccess('');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setEditName(client.name);
+  };
+
   const ml = logs.filter(l=>l.clientId===client.id);
   const coachId = coach?.id || '';
   const cm = messages.filter(m=>(m.senderId===client.id&&m.receiverId===coachId)||(m.senderId===coachId&&m.receiverId===client.id)).sort((a,b)=>new Date(a.timestamp).getTime()-new Date(b.timestamp).getTime());
@@ -370,6 +433,13 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-[#1c1c1f] border border-[#27272a] px-3 py-1 rounded-[12px] flex items-center gap-1.5"><Flame className="w-4 h-4 text-[#e5ba73] animate-bounce" /><span className="text-xs  font-bold text-white">{client.streak}D</span></div>
+          <button
+            onClick={() => setShowProfileModal(true)}
+            className="text-[11px] bg-[#242428] hover:bg-[#d4f826]/10 text-[#8e8e93] hover:text-[#d4f826] px-2.5 py-1.5 rounded-[8px] border border-[#27272a] transition-all flex items-center gap-1"
+            title="Configuración de perfil"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
           <button onClick={onLogout} className="text-[11px]  bg-[#242428] hover:bg-[#ff5449]/10 text-[#8e8e93] hover:text-[#ef4444] px-2.5 py-1.5 rounded-[8px] border border-[#27272a] transition-all">SALIR</button>
         </div>
       </header>
@@ -896,6 +966,105 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
 
       {/* Avatar Lightbox */}
       {avatarLightbox && (<div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6" onClick={()=>setAvatarLightbox(false)}><div className="relative max-w-[420px] w-full"><img src={client.selfieUrl || client.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'} alt={client.name} className="w-full rounded-[16px] object-contain border-4 border-[#d4f826]"/><button onClick={()=>setAvatarLightbox(false)} className="absolute -top-3 -right-3 bg-black/70 text-white rounded-full p-2 hover:bg-[#ff5449] transition-all"><svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div></div>)}
+
+      {/* Profile Settings Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-sm p-5 relative max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="text-center mb-5">
+              <div className="inline-flex p-2.5 bg-[#d4f826]/10 text-[#d4f826] rounded-[12px] border border-[#d4f826]/20 mb-2">
+                <UserIcon className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white uppercase">Configuración de Perfil</h3>
+            </div>
+
+            {/* Form */}
+            <div className="space-y-4">
+              {/* Name */}
+              <div>
+                <label className="block text-[11px] text-[#8e8e93] uppercase mb-1">Nombre</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3 text-sm text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors"
+                  placeholder="Tu nombre"
+                />
+              </div>
+
+              <div className="border-t border-[#27272a] pt-4">
+                <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider font-bold mb-3">Cambiar Contraseña</p>
+
+                {/* Current Password */}
+                <div className="mb-3">
+                  <label className="block text-[11px] text-[#8e8e93] uppercase mb-1">Contraseña Actual</label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3 text-sm text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors"
+                    placeholder="••••••"
+                  />
+                </div>
+
+                {/* New Password */}
+                <div className="mb-3">
+                  <label className="block text-[11px] text-[#8e8e93] uppercase mb-1">Nueva Contraseña</label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3 text-sm text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors"
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className="block text-[11px] text-[#8e8e93] uppercase mb-1">Confirmar Nueva Contraseña</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full bg-transparent border border-[#3f3f46] rounded-[8px] px-4 py-3 text-sm text-white placeholder-[#8e8e93] focus:outline-none focus:border-[#d4f826] transition-colors"
+                    placeholder="Repite la nueva contraseña"
+                  />
+                </div>
+              </div>
+
+              {/* Error / Success */}
+              {profileError && (
+                <div className="bg-[#ff5449]/10 border border-[#ff5449]/20 rounded-[8px] p-2.5 text-[11px] text-[#ff5449]">
+                  {profileError}
+                </div>
+              )}
+              {profileSuccess && (
+                <div className="bg-[#25d366]/10 border border-[#25d366]/20 rounded-[8px] p-2.5 text-[11px] text-[#25d366]">
+                  {profileSuccess}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={closeProfileModal}
+                  className="flex-1 text-[#8e8e93] text-xs py-3 rounded-[8px] hover:bg-[#242428] transition-all active:scale-[0.98] font-bold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={savingProfile}
+                  className="flex-1 bg-[#d4f826] text-black font-extrabold text-xs py-3 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {savingProfile ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#141416] border-t border-[#27272a] grid grid-cols-3 text-center text-[10px] text-[#8e8e93] py-1.5 pb-4 z-40">
         <button onClick={()=>setTab('w')} className={`flex flex-col items-center gap-0.5 ${tab==='w'?'text-[#d4f826]':''}`}><Dumbbell className="w-4 h-4"/><span>Rutina</span></button>

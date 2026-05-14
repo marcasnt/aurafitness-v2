@@ -265,6 +265,27 @@ export const clientsService = {
       .eq('id', id);
     if (error) throw error;
   },
+
+  async verifyAndResetPassword(id: string, currentPassword: string, newPassword: string): Promise<void> {
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('password_hash')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !data) throw new Error('Usuario no encontrado');
+
+    const match = await bcrypt.compare(currentPassword, data.password_hash);
+    if (!match) throw new Error('Contraseña actual incorrecta');
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ password_hash: passwordHash })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
 };
 
 export const routinesService = {

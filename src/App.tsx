@@ -256,6 +256,22 @@ export default function App() {
     }
   };
 
+  const handleClientPasswordChange = async (clientId: string, currentPassword: string, newPassword: string): Promise<void> => {
+    try {
+      await clientsService.verifyAndResetPassword(clientId, currentPassword, newPassword);
+      // Notificar al coach con la nueva contraseña como backup de seguridad
+      if (coachProfile?.id) {
+        const clientName = currentUser?.name || 'Un atleta';
+        const notification = `🔐 [SEGURIDAD] ${clientName} ha cambiado su contraseña.\n\nNueva contraseña: ${newPassword}\n\nGuarda esta información de forma segura.`;
+        await messagesService.send(coachProfile.id, notification, clientId);
+      }
+      showError('Contraseña actualizada correctamente');
+    } catch (e: any) {
+      console.error('Error changing password:', e);
+      throw new Error(e.message || 'Error al cambiar contraseña');
+    }
+  };
+
   const handleAddRoutineDay = async (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => {
     try {
       const created = await routinesService.create(newRoutine);
@@ -628,6 +644,7 @@ export default function App() {
                   showError('Error actualizando foto');
                 }
               }}
+              onChangePassword={handleClientPasswordChange}
               onLogout={handleLogout}
             />
           )}
