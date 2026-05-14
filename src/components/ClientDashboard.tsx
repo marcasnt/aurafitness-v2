@@ -175,8 +175,12 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
         startTimer(rest);
       } else {
         const groupExercises = ar.exercises.filter(e => e.supersetGroup === ex.supersetGroup);
-        const allCompleted = groupExercises.every(gex => cs[`${gex.id}-${si}`] || gex.id === eid);
-        if (allCompleted) startTimer(rest);
+        // Contar completados: para el ejercicio actual usamos chk (fresh), para los otros cs (prev state)
+        const completedCount = groupExercises.reduce((acc, gex) => {
+          if (gex.id === eid) return acc + (chk ? 1 : 0);
+          return acc + (cs[`${gex.id}-${si}`] ? 1 : 0);
+        }, 0);
+        if (completedCount === groupExercises.length) startTimer(rest);
       }
     }
   };
@@ -537,6 +541,14 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                           <div className="bg-[#d4f826]/10 px-3 py-1.5 border-b border-[#d4f826]/20 flex items-center gap-2">
                             <span className="text-[10px] font-bold text-[#d4f826] uppercase tracking-wider">SUPERSET {group.group}</span>
                             <span className="text-[9px] text-[#8e8e93]">{group.exercises.length} ejercicios • {group.exercises[0]?.sets} series</span>
+                          </div>
+                          <div className="px-3 pt-2 pb-1">
+                            <div className="bg-[#1c1c1f] border border-[#d4f826]/10 rounded-[8px] p-2 flex items-start gap-2">
+                              <svg className="w-3.5 h-3.5 text-[#d4f826] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              <p className="text-[10px] text-[#8e8e93] leading-relaxed">
+                                <span className="text-[#d4f826] font-semibold">Realiza estos ejercicios uno tras otro</span> sin descanso entre ellos. Una vez completada una serie de <span className="text-white font-medium">cada</span> ejercicio del grupo, el cronómetro de descanso se activará automáticamente.
+                              </p>
+                            </div>
                           </div>
                           <div className="p-3 space-y-2">
                             {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex, idx) => {
