@@ -195,7 +195,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   };
   const gSets = (ex: any) => ex.setDetails ? ex.setDetails.length : ex.sets;
 
-  const fin = (e: React.FormEvent) => {
+  const fin = async (e: React.FormEvent) => {
     e.preventDefault(); if(!ar) return;
     const el = ar.exercises.map(ex => {
       const sets = gSets(ex);
@@ -236,7 +236,17 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
     setLastSetSummary(summaryText);
 
     const reportMessage = `Reporte: ${ar.name}\n⏱ ${dur}min | Fatiga: ${feel}/5\n${summaryText}${cmt ? '\n💬 ' + cmt : ''}`;
-    if (coach) onSendMessage(coach.id, reportMessage);
+    console.log('[ClientDashboard] Reporte generado:', reportMessage);
+    if (coach && coach.id) {
+      try {
+        await onSendMessage(coach.id, reportMessage);
+        console.log('[ClientDashboard] Reporte enviado exitosamente al coach');
+      } catch (err) {
+        console.error('[ClientDashboard] Error enviando reporte:', err);
+      }
+    } else {
+      console.warn('[ClientDashboard] No se pudo enviar reporte: coach no disponible');
+    }
     setOk(true);
     setWorkoutStartTime(null);
     setElapsedMinutes(0);
@@ -505,7 +515,188 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                 </div>
                 {ar.description&&<p className="text-xs text-[#8e8e93] mt-1 italic">{ar.description}</p>}
               </div>
-              <div className="space-y-3">{ar.exercises.map((ex,idx)=>{const ie=expId===ex.id;let dc=0;for(let s=1;s<=gSets(ex);s++){if(cs[`${ex.id}-${s}`])dc++;}const fl=dc===gSets(ex);return(<div key={ex.id} className={`bg-[#141416] border rounded-[12px] overflow-hidden transition-all ${fl?'border-[#25d366]/30 opacity-80':ie?'border-[#d4f826]/50':'border-[#27272a]'}`}><div onClick={()=>setExpId(ie?null:ex.id)} className="cursor-pointer hover:bg-[#1c1c1f] transition-all">{ex.imageUrl&&(<div className="relative h-36 sm:h-44 overflow-hidden bg-[#1c1c1f]" onClick={(e)=>{e.stopPropagation();setFi(ex.imageUrl!)}}><img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover"/><div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-transparent to-transparent"/><div className="absolute top-3 left-3 bg-black/70 text-[#d4f826] text-[10px]  font-bold px-2 py-1 rounded-[8px] border border-[#d4f826]/20">#{idx+1}</div><div className="absolute bottom-3 right-3 bg-[#0a0a0c]/80 text-white text-[9px]  px-2 py-1 rounded-[8px] flex items-center gap-1"><ImageIcon className="w-3 h-3"/>Ampliar</div><div className="absolute bottom-0 left-0 right-0 p-3"><h3 className="text-sm font-bold text-white">{ex.name}</h3><div className="flex items-center gap-3 mt-1"><span className="text-[10px] bg-[#d4f826]/20 text-[#d4f826] px-1.5 py-0.5 rounded  font-bold">{ex.setDetails ? `${ex.setDetails.length}x` : `${ex.sets}x`}{ex.reps}</span><span className="text-[10px] bg-[#242428] text-white px-1.5 py-0.5 rounded ">{ex.setDetails ? `${Math.min(...ex.setDetails.map((s:any)=>s.weight))}-${Math.max(...ex.setDetails.map((s:any)=>s.weight))}kg` : `${ex.weight}kg`}</span><span className="text-[10px] bg-[#242428] text-[#8e8e93] px-1.5 py-0.5 rounded ">{ex.restTime}s</span></div></div></div>)}<div className="p-4 flex items-center justify-between gap-2"><div className="flex items-center gap-3 min-w-0">{!ex.imageUrl&&<span className="w-7 h-7 rounded-full bg-[#1c1c1f] text-[#8e8e93] text-xs flex items-center justify-center  font-bold border border-[#27272a] shrink-0">{idx+1}</span>}<div className="min-w-0">{!ex.imageUrl&&(<>  <h3 className="text-xs md:text-sm font-bold text-white truncate">{ex.name}</h3><p className="text-[11px] text-[#8e8e93] mt-0.5"><span className="text-white ">{ex.sets} Series</span> - {ex.reps} - <span className="text-[#d4f826] ">{ex.setDetails ? `${Math.min(...ex.setDetails.map((s:any)=>s.weight))}-${Math.max(...ex.setDetails.map((s:any)=>s.weight))}kg` : `${ex.weight}kg`}</span></p></>)}{ex.imageUrl&&<p className="text-[10px] text-[#8e8e93]">{ie?'Ocultar series':'Ver series'}</p>}</div></div><div className="flex items-center gap-3">{dc>0&&<span className={`text-[10px]  px-2 py-0.5 rounded font-bold ${fl?'bg-[#25d366]/10 text-[#25d366]':'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>{dc}/{gSets(ex)}</span>}{ie?<ChevronUp className="w-4 h-4 text-[#8e8e93]"/>:<ChevronDown className="w-4 h-4 text-[#8e8e93]"/>}</div></div></div>{ie&&(<div className="p-4 bg-[#0a0a0c] border-t border-[#1f1f23] space-y-3">{ex.notes&&<div className="bg-[#1c1c1f] border-l-2 border-[#e5ba73] p-2.5 rounded-r-lg text-[11px] text-[#e5ba73]">💡 <span className="font-semibold text-white">Coach:</span> {ex.notes}</div>}<div className="space-y-2"><div className="grid grid-cols-12 text-[10px] uppercase  tracking-wider text-[#52525b] font-bold pb-1 text-center"><div className="col-span-2 text-left pl-2">SERIE</div><div className="col-span-4">REPS</div><div className="col-span-4">PESO</div><div className="col-span-2">OK</div></div>{Array.from({length:gSets(ex)}).map((_,si)=>{const sn=si+1;const sk=`${ex.id}-${sn}`;const sd=cs[sk]||false;return(<div key={sn} className={`grid grid-cols-12 items-center py-2 rounded-[8px] border text-center transition-all ${sd?'bg-[#25d366]/5 border-[#25d366]/20':'bg-[#141416] border-[#27272a]'}`}><div className="col-span-2 text-left pl-4  font-bold text-xs text-white">#{sn}</div><div className="col-span-4 px-2"><input type="text" inputMode="numeric" pattern="[0-9]*" value={gr(ex,sn) || ''} disabled={sd} onChange={(e)=>{ const v = e.target.value.replace(/[^0-9]/g, ''); setLr(p=>({...p,[`${ex.id}-${sn}`]: v === '' ? 0 : Number(v)})); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-md text-xs py-1 px-2 text-center text-white  font-bold disabled:opacity-60 focus:border-[#d4f826] focus:outline-none"/></div><div className="col-span-4 px-2"><input type="text" inputMode="numeric" pattern="[0-9]*" value={gw(ex,sn) || ''} disabled={sd} onChange={(e)=>{ const v = e.target.value.replace(/[^0-9]/g, ''); setLw(p=>({...p,[`${ex.id}-${sn}`]: v === '' ? 0 : Number(v)})); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-md text-xs py-1 px-2 text-center text-white  font-bold disabled:opacity-60 focus:border-[#d4f826] focus:outline-none"/></div><div className="col-span-2 flex justify-center"><input type="checkbox" checked={sd} onChange={(e)=>tog(ex.id,sn,ex.restTime,e.target.checked)} className="w-5 h-5 rounded-md accent-[#d4f826] cursor-pointer"/></div></div>);})}</div><div className="text-[10px] text-[#8e8e93]  flex items-center justify-between pt-1"><span>Descanso: <strong className="text-white">{ex.restTime}s</strong></span><button onClick={()=>{setTm(ex.restTime);setTs(ex.restTime);setTa(true);}} className="text-[#d4f826] hover:underline">Iniciar Cronómetro</button></div></div>)}</div>);})}</div>
+              <div className="space-y-3">{(() => {
+                  const sorted = ar.exercises.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+                  const groups = [];
+                  for (const ex of sorted) {
+                    if (ex.supersetGroup) {
+                      const last = groups[groups.length - 1];
+                      if (last && last.type === 'superset' && last.group === ex.supersetGroup) {
+                        last.exercises.push(ex);
+                      } else {
+                        groups.push({ type: 'superset', group: ex.supersetGroup, exercises: [ex] });
+                      }
+                    } else {
+                      groups.push({ type: 'single', exercises: [ex] });
+                    }
+                  }
+                  return groups.map((group, gIdx) => {
+                    if (group.type === 'superset') {
+                      return (
+                        <div key={`ss-${group.group}-${gIdx}`} className="bg-[#0a0a0c] border border-[#d4f826]/30 rounded-[12px] overflow-hidden relative">
+                          <div className="bg-[#d4f826]/10 px-3 py-1.5 border-b border-[#d4f826]/20 flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-[#d4f826] uppercase tracking-wider">SUPERSET {group.group}</span>
+                            <span className="text-[9px] text-[#8e8e93]">{group.exercises.length} ejercicios • {group.exercises[0]?.sets} series</span>
+                          </div>
+                          <div className="p-3 space-y-2">
+                            {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex, idx) => {
+                              const ie = expId === ex.id;
+                              let dc = 0;
+                              for (let s = 1; s <= gSets(ex); s++) { if (cs[`${ex.id}-${s}`]) dc++; }
+                              const fl = dc === gSets(ex);
+                              return (
+                                <div key={ex.id} className={`bg-[#141416] border rounded-[12px] overflow-hidden transition-all ${fl ? 'border-[#25d366]/30 opacity-80' : ie ? 'border-[#d4f826]/50' : 'border-[#27272a]'}`}>
+                                  <div onClick={() => setExpId(ie ? null : ex.id)} className="cursor-pointer hover:bg-[#1c1c1f] transition-all">
+                                    {ex.imageUrl && (
+                                      <div className="relative h-36 sm:h-44 overflow-hidden bg-[#1c1c1f]" onClick={(e) => { e.stopPropagation(); setFi(ex.imageUrl!) }}>
+                                        <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-transparent to-transparent" />
+                                        <div className="absolute top-3 left-3 bg-black/70 text-[#d4f826] text-[10px] font-bold px-2 py-1 rounded-[8px] border border-[#d4f826]/20">{ex.supersetOrder}º</div>
+                                        <div className="absolute bottom-3 right-3 bg-[#0a0a0c]/80 text-white text-[9px] px-2 py-1 rounded-[8px] flex items-center gap-1"><ImageIcon className="w-3 h-3" />Ampliar</div>
+                                        <div className="absolute bottom-0 left-0 right-0 p-3">
+                                          <h3 className="text-sm font-bold text-white">{ex.name}</h3>
+                                          <div className="flex items-center gap-3 mt-1">
+                                            <span className="text-[10px] bg-[#d4f826]/20 text-[#d4f826] px-1.5 py-0.5 rounded font-bold">{ex.setDetails ? `${ex.setDetails.length}x` : `${ex.sets}x`}{ex.reps}</span>
+                                            <span className="text-[10px] bg-[#242428] text-white px-1.5 py-0.5 rounded">{ex.setDetails ? `${Math.min(...ex.setDetails.map((s) => s.weight))}-${Math.max(...ex.setDetails.map((s) => s.weight))}kg` : `${ex.weight}kg`}</span>
+                                            <span className="text-[10px] bg-[#242428] text-[#8e8e93] px-1.5 py-0.5 rounded">{ex.restTime}s</span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div className="p-4 flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        {!ex.imageUrl && <span className="w-7 h-7 rounded-full bg-[#1c1c1f] text-[#8e8e93] text-xs flex items-center justify-center font-bold border border-[#27272a] shrink-0">{ex.supersetOrder}º</span>}
+                                        <div className="min-w-0">
+                                          {!ex.imageUrl && (
+                                            <>
+                                              <h3 className="text-xs md:text-sm font-bold text-white truncate">{ex.name}</h3>
+                                              <p className="text-[11px] text-[#8e8e93] mt-0.5"><span className="text-white">{ex.sets} Series</span> - {ex.reps} - <span className="text-[#d4f826]">{ex.setDetails ? `${Math.min(...ex.setDetails.map((s) => s.weight))}-${Math.max(...ex.setDetails.map((s) => s.weight))}kg` : `${ex.weight}kg`}</span></p>
+                                            </>
+                                          )}
+                                          {ex.imageUrl && <p className="text-[10px] text-[#8e8e93]">{ie ? 'Ocultar series' : 'Ver series'}</p>}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                        {dc > 0 && <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${fl ? 'bg-[#25d366]/10 text-[#25d366]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>{dc}/{gSets(ex)}</span>}
+                                        {ie ? <ChevronUp className="w-4 h-4 text-[#8e8e93]" /> : <ChevronDown className="w-4 h-4 text-[#8e8e93]" />}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {ie && (
+                                    <div className="p-4 bg-[#0a0a0c] border-t border-[#1f1f23] space-y-3">
+                                      {ex.notes && <div className="bg-[#1c1c1f] border-l-2 border-[#e5ba73] p-2.5 rounded-r-lg text-[11px] text-[#e5ba73]">💡 <span className="font-semibold text-white">Coach:</span> {ex.notes}</div>}
+                                      <div className="space-y-2">
+                                        <div className="grid grid-cols-12 text-[10px] uppercase tracking-wider text-[#52525b] font-bold pb-1 text-center">
+                                          <div className="col-span-2 text-left pl-2">SERIE</div>
+                                          <div className="col-span-4">REPS</div>
+                                          <div className="col-span-4">PESO</div>
+                                          <div className="col-span-2">OK</div>
+                                        </div>
+                                        {Array.from({ length: gSets(ex) }).map((_, si) => {
+                                          const sn = si + 1;
+                                          const sk = `${ex.id}-${sn}`;
+                                          const sd = cs[sk] || false;
+                                          return (
+                                            <div key={sn} className={`grid grid-cols-12 items-center py-2 rounded-[8px] border text-center transition-all ${sd ? 'bg-[#25d366]/5 border-[#25d366]/20' : 'bg-[#141416] border-[#27272a]'}`}>
+                                              <div className="col-span-2 text-left pl-4 font-bold text-xs text-white">#{sn}</div>
+                                              <div className="col-span-4 px-2"><input type="text" inputMode="numeric" pattern="[0-9]*" value={gr(ex, sn) || ''} disabled={sd} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setLr(p => ({ ...p, [`${ex.id}-${sn}`]: v === '' ? 0 : Number(v) })); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-md text-xs py-1 px-2 text-center text-white font-bold disabled:opacity-60 focus:border-[#d4f826] focus:outline-none" /></div>
+                                              <div className="col-span-4 px-2"><input type="text" inputMode="numeric" pattern="[0-9]*" value={gw(ex, sn) || ''} disabled={sd} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setLw(p => ({ ...p, [`${ex.id}-${sn}`]: v === '' ? 0 : Number(v) })); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-md text-xs py-1 px-2 text-center text-white font-bold disabled:opacity-60 focus:border-[#d4f826] focus:outline-none" /></div>
+                                              <div className="col-span-2 flex justify-center"><input type="checkbox" checked={sd} onChange={(e) => tog(ex.id, sn, ex.restTime, e.target.checked)} className="w-5 h-5 rounded-md accent-[#d4f826] cursor-pointer" /></div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                      <div className="text-[10px] text-[#8e8e93] flex items-center justify-between pt-1">
+                                        <span>Descanso: <strong className="text-white">{ex.restTime}s</strong></span>
+                                        <button onClick={() => { setTm(ex.restTime); setTs(ex.restTime); setTa(true); }} className="text-[#d4f826] hover:underline">Iniciar Cronómetro</button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+                    const ex = group.exercises[0];
+                    const ie = expId === ex.id;
+                    let dc = 0;
+                    for (let s = 1; s <= gSets(ex); s++) { if (cs[`${ex.id}-${s}`]) dc++; }
+                    const fl = dc === gSets(ex);
+                    const idx = sorted.indexOf(ex);
+                    return (
+                      <div key={ex.id} className={`bg-[#141416] border rounded-[12px] overflow-hidden transition-all ${fl ? 'border-[#25d366]/30 opacity-80' : ie ? 'border-[#d4f826]/50' : 'border-[#27272a]'}`}>
+                        <div onClick={() => setExpId(ie ? null : ex.id)} className="cursor-pointer hover:bg-[#1c1c1f] transition-all">
+                          {ex.imageUrl && (
+                            <div className="relative h-36 sm:h-44 overflow-hidden bg-[#1c1c1f]" onClick={(e) => { e.stopPropagation(); setFi(ex.imageUrl!) }}>
+                              <img src={ex.imageUrl} alt={ex.name} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-transparent to-transparent" />
+                              <div className="absolute top-3 left-3 bg-black/70 text-[#d4f826] text-[10px] font-bold px-2 py-1 rounded-[8px] border border-[#d4f826]/20">#{idx + 1}</div>
+                              <div className="absolute bottom-3 right-3 bg-[#0a0a0c]/80 text-white text-[9px] px-2 py-1 rounded-[8px] flex items-center gap-1"><ImageIcon className="w-3 h-3" />Ampliar</div>
+                              <div className="absolute bottom-0 left-0 right-0 p-3">
+                                <h3 className="text-sm font-bold text-white">{ex.name}</h3>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <span className="text-[10px] bg-[#d4f826]/20 text-[#d4f826] px-1.5 py-0.5 rounded font-bold">{ex.setDetails ? `${ex.setDetails.length}x` : `${ex.sets}x`}{ex.reps}</span>
+                                  <span className="text-[10px] bg-[#242428] text-white px-1.5 py-0.5 rounded">{ex.setDetails ? `${Math.min(...ex.setDetails.map((s) => s.weight))}-${Math.max(...ex.setDetails.map((s) => s.weight))}kg` : `${ex.weight}kg`}</span>
+                                  <span className="text-[10px] bg-[#242428] text-[#8e8e93] px-1.5 py-0.5 rounded">{ex.restTime}s</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="p-4 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {!ex.imageUrl && <span className="w-7 h-7 rounded-full bg-[#1c1c1f] text-[#8e8e93] text-xs flex items-center justify-center font-bold border border-[#27272a] shrink-0">{idx + 1}</span>}
+                              <div className="min-w-0">
+                                {!ex.imageUrl && (
+                                  <>
+                                    <h3 className="text-xs md:text-sm font-bold text-white truncate">{ex.name}</h3>
+                                    <p className="text-[11px] text-[#8e8e93] mt-0.5"><span className="text-white">{ex.sets} Series</span> - {ex.reps} - <span className="text-[#d4f826]">{ex.setDetails ? `${Math.min(...ex.setDetails.map((s) => s.weight))}-${Math.max(...ex.setDetails.map((s) => s.weight))}kg` : `${ex.weight}kg`}</span></p>
+                                  </>
+                                )}
+                                {ex.imageUrl && <p className="text-[10px] text-[#8e8e93]">{ie ? 'Ocultar series' : 'Ver series'}</p>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {dc > 0 && <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${fl ? 'bg-[#25d366]/10 text-[#25d366]' : 'bg-[#e5ba73]/10 text-[#e5ba73]'}`}>{dc}/{gSets(ex)}</span>}
+                              {ie ? <ChevronUp className="w-4 h-4 text-[#8e8e93]" /> : <ChevronDown className="w-4 h-4 text-[#8e8e93]" />}
+                            </div>
+                          </div>
+                        </div>
+                        {ie && (
+                          <div className="p-4 bg-[#0a0a0c] border-t border-[#1f1f23] space-y-3">
+                            {ex.notes && <div className="bg-[#1c1c1f] border-l-2 border-[#e5ba73] p-2.5 rounded-r-lg text-[11px] text-[#e5ba73]">💡 <span className="font-semibold text-white">Coach:</span> {ex.notes}</div>}
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-12 text-[10px] uppercase tracking-wider text-[#52525b] font-bold pb-1 text-center">
+                                <div className="col-span-2 text-left pl-2">SERIE</div>
+                                <div className="col-span-4">REPS</div>
+                                <div className="col-span-4">PESO</div>
+                                <div className="col-span-2">OK</div>
+                              </div>
+                              {Array.from({ length: gSets(ex) }).map((_, si) => {
+                                const sn = si + 1;
+                                const sk = `${ex.id}-${sn}`;
+                                const sd = cs[sk] || false;
+                                return (
+                                  <div key={sn} className={`grid grid-cols-12 items-center py-2 rounded-[8px] border text-center transition-all ${sd ? 'bg-[#25d366]/5 border-[#25d366]/20' : 'bg-[#141416] border-[#27272a]'}`}>
+                                    <div className="col-span-2 text-left pl-4 font-bold text-xs text-white">#{sn}</div>
+                                    <div className="col-span-4 px-2"><input type="text" inputMode="numeric" pattern="[0-9]*" value={gr(ex, sn) || ''} disabled={sd} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setLr(p => ({ ...p, [`${ex.id}-${sn}`]: v === '' ? 0 : Number(v) })); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-md text-xs py-1 px-2 text-center text-white font-bold disabled:opacity-60 focus:border-[#d4f826] focus:outline-none" /></div>
+                                    <div className="col-span-4 px-2"><input type="text" inputMode="numeric" pattern="[0-9]*" value={gw(ex, sn) || ''} disabled={sd} onChange={(e) => { const v = e.target.value.replace(/[^0-9]/g, ''); setLw(p => ({ ...p, [`${ex.id}-${sn}`]: v === '' ? 0 : Number(v) })); }} className="w-full bg-[#1c1c1f] border border-[#27272a] rounded-md text-xs py-1 px-2 text-center text-white font-bold disabled:opacity-60 focus:border-[#d4f826] focus:outline-none" /></div>
+                                    <div className="col-span-2 flex justify-center"><input type="checkbox" checked={sd} onChange={(e) => tog(ex.id, sn, ex.restTime, e.target.checked)} className="w-5 h-5 rounded-md accent-[#d4f826] cursor-pointer" /></div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div className="text-[10px] text-[#8e8e93] flex items-center justify-between pt-1">
+                              <span>Descanso: <strong className="text-white">{ex.restTime}s</strong></span>
+                              <button onClick={() => { setTm(ex.restTime); setTs(ex.restTime); setTa(true); }} className="text-[#d4f826] hover:underline">Iniciar Cronómetro</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}</div>
               <div className="pt-4"><button onClick={()=>setSm(true)} className="w-full bg-[#d4f826] text-black font-extrabold  tracking-widest text-xs py-4 rounded-[28px] hover:bg-[#e2fa52] transition-all flex items-center justify-center gap-2 active:scale-[0.98]"><CheckCircle className="w-4 h-4"/>FINALIZAR SESIÓN</button></div>
             </>
           ) : (
