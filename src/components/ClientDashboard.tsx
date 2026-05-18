@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon, AlertCircle, X, Settings, User as UserIcon } from 'lucide-react';
+import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon, AlertCircle, X, Settings, User as UserIcon, ArrowUp, ArrowDown, Minus, Calendar } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
 import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
 import MeasurementsModal from './MeasurementsModal';
@@ -45,6 +45,13 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
   const [fi, setFi] = useState<string|null>(null);
   const [showMeasurementsModal, setShowMeasurementsModal] = useState(false);
   const [lastSetSummary, setLastSetSummary] = useState<string>('');
+
+  // Resultados post-sesión con comparación
+  const [showResults, setShowResults] = useState(false);
+  const [sessionResult, setSessionResult] = useState<{
+    current: WorkoutLog;
+    previous: WorkoutLog | null;
+  } | null>(null);
 
   // Cambio de avatar del cliente
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -216,10 +223,31 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
       const sets = gSets(ex);
       return { exerciseId:ex.id, exerciseName:ex.name, sets: Array.from({length:sets}).map((_,i)=>({setNumber:i+1,reps:gr(ex,i+1),weight:gw(ex,i+1),completed:cs[`${ex.id}-${i+1}`]||false})) };
     });
-    onAddLog({id:`log-${Date.now()}`,clientId:client.id,routineDayId:ar.id,routineName:ar.name,date:new Date().toISOString().split('T')[0],durationMinutes:dur,exercises:el,feelingScore:feel,coachNotes:cmt?`Comentario: "${cmt}"`:undefined});
-    onUpdateClientStreak(client.id,(client.streak||0)+1);
 
-    // Resumen de última serie de cada ejercicio para el coach
+    const newLog: WorkoutLog = {
+      id: `log-${Date.now()}`,
+      clientId: client.id,
+      routineDayId: ar.id,
+      routineName: ar.name,
+      date: new Date().toISOString().split('T')[0],
+      durationMinutes: dur,
+      exercises: el,
+      feelingScore: feel,
+      coachNotes: cmt ? `Comentario: "${cmt}"` : undefined
+    };
+
+    onAddLog(newLog);
+    onUpdateClientStreak(client.id, (client.streak||0)+1);
+
+    // Encontrar sesión anterior de la misma rutina para comparar
+    const previousLog = logs
+      .filter(l => l.routineDayId === ar.id && l.id !== newLog.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || null;
+
+    setSessionResult({ current: newLog, previous: previousLog });
+    setShowResults(true);
+
+    // Reporte al coach: todas las series de cada ejercicio
     const exercisesByGroup: { group?: string; exercises: typeof el }[] = [];
     for (const ex of el) {
       const origEx = ar.exercises.find(e => e.id === ex.exerciseId);
@@ -235,22 +263,20 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
       }
     }
 
-    const summaryLines = exercisesByGroup.map(g => {
+    const reportLines = exercisesByGroup.map(g => {
       if (g.group) {
         const exLines = g.exercises.map(ex => {
-          const lastSet = [...ex.sets].reverse().find(s => s.completed) || ex.sets[ex.sets.length - 1];
-          return `  • ${ex.exerciseName}: ${lastSet.reps} reps × ${lastSet.weight}kg`;
+          const setsInfo = ex.sets.map(s => `  #${s.setNumber}: ${s.reps} reps × ${s.weight}kg ${s.completed ? '✓' : '○'}`).join('\n');
+          return `• ${ex.exerciseName}:\n${setsInfo}`;
         }).join('\n');
         return `SUPERSET ${g.group}:\n${exLines}`;
       }
       const ex = g.exercises[0];
-      const lastSet = [...ex.sets].reverse().find(s => s.completed) || ex.sets[ex.sets.length - 1];
-      return `• ${ex.exerciseName}: ${lastSet.reps} reps × ${lastSet.weight}kg`;
+      const setsInfo = ex.sets.map(s => `  #${s.setNumber}: ${s.reps} reps × ${s.weight}kg ${s.completed ? '✓' : '○'}`).join('\n');
+      return `• ${ex.exerciseName}:\n${setsInfo}`;
     });
-    const summaryText = summaryLines.join('\n');
-    setLastSetSummary(summaryText);
 
-    const reportMessage = `Reporte: ${ar.name}\n⏱ ${dur}min | Fatiga: ${feel}/5\n${summaryText}${cmt ? '\n💬 ' + cmt : ''}`;
+    const reportMessage = `Reporte: ${ar.name}\n⏱ ${dur}min | Fatiga: ${feel}/5\n\n${reportLines.join('\n\n')}${cmt ? '\n\n💬 ' + cmt : ''}`;
     console.log('[ClientDashboard] Reporte generado:', reportMessage);
     if (coach && coach.id) {
       try {
@@ -263,6 +289,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
       console.warn('[ClientDashboard] No se pudo enviar reporte: coach no disponible');
     }
     setOk(true);
+    setSm(false);
     setWorkoutStartTime(null);
     setElapsedMinutes(0);
     workoutPersistence.clear();
@@ -279,6 +306,8 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
     setCmt('');
     setWorkoutStartTime(null);
     setElapsedMinutes(0);
+    setShowResults(false);
+    setSessionResult(null);
     workoutPersistence.clear();
   };
 
@@ -1062,6 +1091,115 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* RESULTADOS POST-SESIÓN */}
+      {showResults && sessionResult && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 relative my-auto">
+            {/* Header */}
+            <div className="text-center mb-5">
+              <div className="inline-flex p-2.5 bg-[#d4f826]/10 text-[#d4f826] rounded-[12px] border border-[#d4f826]/20 mb-2">
+                <Trophy className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-white uppercase">Sesión Completada</h3>
+              <p className="text-[11px] text-[#8e8e93] mt-1">{sessionResult.current.routineName}</p>
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
+              <div className="bg-[#1c1c1f] border border-[#27272a] rounded-[10px] p-2.5 text-center">
+                <Timer className="w-3.5 h-3.5 text-[#8e8e93] mx-auto mb-1" />
+                <span className="text-sm font-bold text-white">{sessionResult.current.durationMinutes}</span>
+                <span className="text-[9px] text-[#8e8e93] block">min</span>
+              </div>
+              <div className="bg-[#1c1c1f] border border-[#27272a] rounded-[10px] p-2.5 text-center">
+                <Flame className="w-3.5 h-3.5 text-[#e5ba73] mx-auto mb-1" />
+                <span className="text-sm font-bold text-white">{sessionResult.current.feelingScore}/5</span>
+                <span className="text-[9px] text-[#8e8e93] block">RPE</span>
+              </div>
+              <div className="bg-[#1c1c1f] border border-[#27272a] rounded-[10px] p-2.5 text-center">
+                <Calendar className="w-3.5 h-3.5 text-[#8e8e93] mx-auto mb-1" />
+                <span className="text-sm font-bold text-white">{sessionResult.current.date}</span>
+                <span className="text-[9px] text-[#8e8e93] block">Fecha</span>
+              </div>
+            </div>
+
+            {/* Comparación con sesión anterior */}
+            {sessionResult.previous && (
+              <div className="bg-[#1c1c1f] border border-[#27272a] rounded-[10px] p-3 mb-4">
+                <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider font-bold mb-2">Comparación sesión anterior ({sessionResult.previous.date})</p>
+                <div className="space-y-2">
+                  {(() => {
+                    const { current, previous } = sessionResult;
+                    return current.exercises.map((currEx) => {
+                      const prevEx = previous.exercises.find(e => e.exerciseId === currEx.exerciseId);
+                      if (!prevEx) return null;
+                      const currLastSet = [...currEx.sets].reverse().find(s => s.completed) || currEx.sets[currEx.sets.length - 1];
+                      const prevLastSet = [...prevEx.sets].reverse().find(s => s.completed) || prevEx.sets[prevEx.sets.length - 1];
+                      if (!currLastSet || !prevLastSet) return null;
+
+                      const volumeCurr = currLastSet.reps * currLastSet.weight;
+                      const volumePrev = prevLastSet.reps * prevLastSet.weight;
+                      let icon = <Minus className="w-3 h-3 text-[#8e8e93]" />;
+                      let color = 'text-[#8e8e93]';
+                      if (volumeCurr > volumePrev) { icon = <ArrowUp className="w-3 h-3 text-[#25d366]" />; color = 'text-[#25d366]'; }
+                      else if (volumeCurr < volumePrev) { icon = <ArrowDown className="w-3 h-3 text-[#ff5449]" />; color = 'text-[#ff5449]'; }
+
+                      return (
+                        <div key={currEx.exerciseId} className="flex items-center justify-between text-[11px]">
+                          <span className="text-white font-medium truncate flex-1">{currEx.exerciseName}</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[#52525b]">{prevLastSet.reps}×{prevLastSet.weight}kg</span>
+                            {icon}
+                            <span className={`font-bold ${color}`}>{currLastSet.reps}×{currLastSet.weight}kg</span>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+            )}
+
+            {/* Detalle completo de ejercicios */}
+            <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+              <p className="text-[10px] text-[#8e8e93] uppercase tracking-wider font-bold">Detalle completo de series</p>
+              {sessionResult.current.exercises.map((ex) => (
+                <div key={ex.exerciseId} className="bg-[#0a0a0c] border border-[#27272a] rounded-[10px] p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-white">{ex.exerciseName}</span>
+                    <span className="text-[9px] text-[#8e8e93]">{ex.sets.filter(s => s.completed).length}/{ex.sets.length} series</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {ex.sets.map((set) => (
+                      <div key={set.setNumber} className={`rounded-[6px] p-1.5 text-center border ${set.completed ? 'bg-[#d4f826]/10 border-[#d4f826]/20' : 'bg-[#141416] border-[#27272a]'}`}>
+                        <span className="text-[9px] text-[#8e8e93] block">#{set.setNumber}</span>
+                        <span className="text-[11px] font-bold text-white">{set.reps}×{set.weight}</span>
+                        <span className="text-[8px] text-[#8e8e93]">{set.completed ? '✓' : '○'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Coach notes */}
+            {sessionResult.current.coachNotes && (
+              <div className="bg-[#1c1c1f] border-l-2 border-[#e5ba73] p-3 rounded-r-[10px] mt-4">
+                <p className="text-[11px] text-[#e5ba73]">💬 <span className="font-semibold text-white">Nota:</span> {sessionResult.current.coachNotes.replace('Comentario: "', '').replace('"', '')}</p>
+              </div>
+            )}
+
+            {/* CTA */}
+            <button
+              onClick={resetRoutine}
+              className="w-full mt-5 bg-[#d4f826] text-black font-extrabold text-xs py-3.5 rounded-[28px] hover:bg-[#e2fa52] transition-all active:scale-[0.98]"
+            >
+              FINALIZAR Y VOLVER
+            </button>
           </div>
         </div>
       )}
