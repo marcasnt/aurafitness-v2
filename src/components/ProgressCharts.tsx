@@ -1,8 +1,7 @@
-import React from 'react';
 import {
-  AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine
+  AreaChart, Area, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import { getBodyFatColor, getBodyFatCategory } from '../lib/bodyFatCalculator';
+import { getBodyFatColor } from '../lib/bodyFatCalculator';
 
 // Material Dark Athletic theme colors
 const COLORS = {
@@ -58,7 +57,7 @@ export function WeightChart({ data }: WeightChartProps) {
           <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="date" tick={axisStyle} axisLine={{ stroke: COLORS.grid }} tickLine={false} />
           <YAxis tick={axisStyle} axisLine={{ stroke: COLORS.grid }} tickLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
-          <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: COLORS.lime }} labelStyle={{ color: COLORS.text }} formatter={(value: number) => [`${value} kg`, 'Peso']} />
+          <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: COLORS.lime }} labelStyle={{ color: COLORS.text }} formatter={(value) => [`${value ?? '--'} kg`, 'Peso']} />
           <Area type="monotone" dataKey="weight" stroke={COLORS.lime} strokeWidth={2} fill="url(#weightGradient)" dot={{ fill: COLORS.lime, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: COLORS.lime, stroke: '#0a0a0c', strokeWidth: 2 }} />
         </AreaChart>
       </ResponsiveContainer>
@@ -113,7 +112,7 @@ export function BicepsChart({ data }: BicepsChartProps) {
           <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="date" tick={axisStyle} axisLine={{ stroke: COLORS.grid }} tickLine={false} />
           <YAxis tick={axisStyle} axisLine={{ stroke: COLORS.grid }} tickLine={false} />
-          <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: COLORS.text }} formatter={(value: number, name: string) => [`${value} cm`, name === 'bicepsLeft' ? 'Izquierdo' : 'Derecho']} />
+          <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: COLORS.text }} formatter={(value, name) => [`${value ?? '--'} cm`, name === 'bicepsLeft' ? 'Izquierdo' : 'Derecho']} />
           <Legend wrapperStyle={{ fontSize: '10px', color: COLORS.text, fontFamily: 'Geist, monospace' }} formatter={(value: string) => value === 'bicepsLeft' ? 'Izquierdo' : 'Derecho'} />
           <Bar dataKey="bicepsLeft" name="bicepsLeft" fill={COLORS.blue} radius={[4, 4, 0, 0]} barSize={20} />
           <Bar dataKey="bicepsRight" name="bicepsRight" fill={COLORS.red} radius={[4, 4, 0, 0]} barSize={20} />
@@ -143,7 +142,7 @@ export function MeasurementCards({ latest, previous, gender }: MeasurementCardsP
 
   const items = [
     { label: 'Peso', value: latest.weight, prev: previous?.weight, unit: 'kg', color: 'text-[#d4f826]' },
-    { label: '% Grasa', value: latest.bodyFat, prev: previous?.bodyFat, unit: '%', color: gender && latest.bodyFat ? `text-[${getBodyFatColor(latest.bodyFat, gender)}]` : 'text-[#e4e2e6]', isBodyFat: true },
+    { label: '% Grasa', value: latest.bodyFat, prev: previous?.bodyFat, unit: '%', color: 'text-[#e4e2e6]', isBodyFat: true },
     { label: 'Cintura', value: latest.waist, prev: previous?.waist, unit: 'cm', color: 'text-[#00e5ff]' },
     { label: 'Cadera', value: latest.hips, prev: previous?.hips, unit: 'cm', color: 'text-[#ff00ff]' },
     { label: 'Bíceps Izq.', value: latest.bicepsLeft, prev: previous?.bicepsLeft, unit: 'cm', color: 'text-[#2979ff]' },
@@ -161,7 +160,7 @@ export function MeasurementCards({ latest, previous, gender }: MeasurementCardsP
           <div key={item.label} className="bg-[#141416] border border-[#27272a] rounded-[12px] p-3">
             <p className="text-[9px] text-[#52525b] font-mono uppercase tracking-wider">{item.label}</p>
             <div className="flex items-baseline gap-1 mt-1">
-              <span className={`text-lg font-bold ${item.color}`}>{item.value !== undefined && item.value !== 0 ? item.value : '--'}</span>
+              <span className={`text-lg font-bold ${item.color}`} style={item.isBodyFat && gender && item.value !== undefined ? { color: getBodyFatColor(item.value, gender) } : undefined}>{item.value !== undefined && item.value !== 0 ? item.value : '--'}</span>
               <span className="text-[10px] text-[#52525b]">{item.unit}</span>
             </div>
             {d && (
@@ -199,7 +198,7 @@ export function WorkoutHistoryChart({ data }: WorkoutHistoryChartProps) {
           <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} vertical={false} />
           <XAxis dataKey="date" tick={axisStyle} axisLine={{ stroke: COLORS.grid }} tickLine={false} />
           <YAxis tick={axisStyle} axisLine={{ stroke: COLORS.grid }} tickLine={false} />
-          <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: COLORS.text }} formatter={(value: number, name: string) => name === 'duration' ? [`${value} min`, 'Duración'] : [`${value}/5`, 'Sensación']} />
+          <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: COLORS.text }} formatter={(value, name) => name === 'duration' ? [`${value ?? '--'} min`, 'Duración'] : [`${value ?? '--'}/5`, 'Sensación']} />
           <Legend wrapperStyle={{ fontSize: '10px', color: COLORS.text, fontFamily: 'Geist, monospace' }} />
           <Area type="monotone" dataKey="duration" name="duration" stroke={COLORS.lightGreen} strokeWidth={2} fill="url(#durationGradient)" dot={{ r: 3, fill: COLORS.lightGreen, strokeWidth: 0 }} />
           <Line type="step" dataKey="feeling" name="feeling" stroke={COLORS.orange} strokeWidth={2} dot={{ r: 3, fill: COLORS.orange, strokeWidth: 0 }} />

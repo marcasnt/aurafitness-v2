@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
-import { MeasurementsEntry } from '../types/fitness';
+import { MeasurementsEntry, MeasurementsContext } from '../types/fitness';
 import { calculateBodyFat, getBodyFatCategory, getBodyFatColor } from '../lib/bodyFatCalculator';
 
 interface MeasurementsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (entry: MeasurementsEntry) => void;
+  onSave: (entry: MeasurementsEntry, context: MeasurementsContext) => Promise<boolean>;
   lastMeasurements?: MeasurementsEntry;
   clientName?: string;
   clientGender?: 'male' | 'female';
   clientAge?: number;
-  onGenderChange?: (gender: 'male' | 'female') => void;
-  onAgeChange?: (age: number) => void;
 }
 
 export default function MeasurementsModal({
@@ -24,8 +22,6 @@ export default function MeasurementsModal({
   clientName,
   clientGender,
   clientAge,
-  onGenderChange,
-  onAgeChange,
 }: MeasurementsModalProps) {
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
@@ -36,8 +32,10 @@ export default function MeasurementsModal({
   const [thighsRight, setThighsRight] = useState('');
   const [bicepsLeft, setBicepsLeft] = useState('');
   const [bicepsRight, setBicepsRight] = useState('');
-  const [gender, setGender] = useState<'male' | 'female'>(clientGender || 'male');
+  const [gender, setGender] = useState<'male' | 'female' | null>(clientGender || null);
   const [age, setAge] = useState(String(clientAge || ''));
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   useEffect(() => {
     if (isOpen && lastMeasurements) {
@@ -54,9 +52,14 @@ export default function MeasurementsModal({
       setHeight(''); setWeight(''); setNeck(''); setWaist('');
       setHips(''); setThighsLeft(''); setThighsRight(''); setBicepsLeft(''); setBicepsRight('');
     }
-    if (clientGender) setGender(clientGender);
-    if (clientAge) setAge(String(clientAge));
-  }, [isOpen, lastMeasurements, clientGender, clientAge]);
+    if (isOpen) {
+      setGender(clientGender || null);
+      setAge(clientAge ? String(clientAge) : '');
+      setSaveError(false);
+    }
+    // Inicializar al abrir; cambios de género/edad guardados en el perfil no deben borrar el formulario.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const bodyFat = useMemo(() => {
     const h = parseFloat(height);
@@ -64,18 +67,19 @@ export default function MeasurementsModal({
     const n = parseFloat(neck);
     const wa = parseFloat(waist);
     const hp = parseFloat(hips);
-    const a = parseInt(age) || 25;
-    if (!h || !n || !wa || !w || !a) return null;
-    return calculateBodyFat({ gender, height: h, weight: w, age: a, neck: n, waist: wa, hips: hp || 0 });
+    const a = parseInt(age);
+    if (!gender || !h || !w || !a) return null;
+    return calculateBodyFat({ gender, height: h, weight: w, age: a, neck: n || 0, waist: wa || 0, hips: hp || 0 });
   }, [gender, height, weight, age, neck, waist, hips]);
 
-  const bodyFatCategory = bodyFat ? getBodyFatCategory(gender, bodyFat) : null;
-  const bodyFatColor = bodyFat ? getBodyFatColor(bodyFat, gender) : '#8e8e93';
+  const bodyFatCategory = bodyFat !== null && gender ? getBodyFatCategory(gender, bodyFat) : null;
+  const bodyFatColor = bodyFat !== null && gender ? getBodyFatColor(bodyFat, gender) : '#8e8e93';
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!gender || bodyFat === null || saving) return;
     const entry: MeasurementsEntry = {
       date: new Date().toISOString().split('T')[0],
       height: parseFloat(height) || 0,
@@ -87,10 +91,21 @@ export default function MeasurementsModal({
       thighsRight: parseFloat(thighsRight) || 0,
       bicepsLeft: parseFloat(bicepsLeft) || 0,
       bicepsRight: parseFloat(bicepsRight) || 0,
-      bodyFat: bodyFat ?? undefined,
+      bodyFat,
     };
-    onSave(entry);
-    onClose();
+    setSaving(true);
+    setSaveError(false);
+    try {
+      if (await onSave(entry, { gender, age: parseInt(age) })) {
+        onClose();
+      } else {
+        setSaveError(true);
+      }
+    } catch {
+      setSaveError(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const inputClass = "w-full bg-[#18181b] border border-[#27272a] rounded-lg text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] font-mono transition-colors";
@@ -118,14 +133,14 @@ export default function MeasurementsModal({
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => { setGender('male'); onGenderChange?.('male'); }}
+                onClick={() => setGender('male')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gender === 'male' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
               >
                 Hombre
               </button>
               <button
                 type="button"
-                onClick={() => { setGender('female'); onGenderChange?.('female'); }}
+                onClick={() => setGender('female')}
                 className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${gender === 'female' ? 'bg-[#d4f826] text-black' : 'bg-[#18181b] text-[#8e8e93] border border-[#27272a]'}`}
               >
                 Mujer
@@ -144,9 +159,10 @@ export default function MeasurementsModal({
               onChange={(e) => {
                 const v = e.target.value.replace(/[^0-9]/g, '');
                 setAge(v);
-                if (v) onAgeChange?.(parseInt(v));
               }}
               className={inputClass}
+              required
+              minLength={1}
             />
           </div>
 
@@ -158,11 +174,11 @@ export default function MeasurementsModal({
           <div className="grid grid-cols-2 gap-2.5">
             <div>
               <label className={labelClass}>Altura (cm)</label>
-              <input type="text" inputMode="numeric" placeholder="175" value={height} onChange={(e) => setHeight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+              <input type="text" inputMode="numeric" placeholder="175" value={height} onChange={(e) => setHeight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} required />
             </div>
             <div>
               <label className={labelClass}>Peso (kg)</label>
-              <input type="text" inputMode="numeric" placeholder="75.5" value={weight} onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} />
+              <input type="text" inputMode="numeric" placeholder="75.5" value={weight} onChange={(e) => setWeight(e.target.value.replace(/[^0-9.]/g, ''))} className={inputClass} required />
             </div>
             <div>
               <label className={labelClass}>Cuello (cm)</label>
@@ -209,13 +225,17 @@ export default function MeasurementsModal({
               </div>
             </div>
           )}
+          {bodyFat === null && (
+            <p className="text-[10px] text-[#e5ba73]">Selecciona el género e indica edad, altura y peso para obtener el porcentaje aproximado.</p>
+          )}
+          {saveError && <p className="text-[10px] text-[#ff5449]">No se pudieron guardar las medidas. Intenta de nuevo.</p>}
 
           <div className="flex justify-end gap-2 pt-3">
             <button type="button" onClick={onClose} className="bg-transparent hover:bg-[#18181b] text-[#a1a1aa] text-xs font-semibold py-2 px-4 rounded-xl transition-all">
               Cancelar
             </button>
-            <button type="submit" className="bg-[#d4f826] text-black font-bold text-xs py-2 px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono">
-              GUARDAR MEDIDAS
+            <button type="submit" disabled={bodyFat === null || saving} className="bg-[#d4f826] text-black font-bold text-xs py-2 px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed">
+              {saving ? 'GUARDANDO...' : 'GUARDAR MEDIDAS'}
             </button>
           </div>
         </form>

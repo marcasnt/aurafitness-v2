@@ -186,9 +186,10 @@ export const ProgressLineChart: React.FC<ProgressLineChartProps> = ({ user, titl
           <Tooltip
             contentStyle={tooltipStyle}
             labelStyle={{ color: TEXT_COLOR }}
-            formatter={(value: any, name: string) => {
-              const metric = METRICS.find(m => m.label === name);
-              return [`${value} ${metric?.unit || ''}`, name];
+            formatter={(value, name) => {
+              const metricName = String(name ?? '');
+              const metric = METRICS.find(m => m.label === metricName);
+              return [`${value ?? '--'} ${metric?.unit || ''}`, metricName];
             }}
           />
           <Legend

@@ -135,6 +135,7 @@ CREATE TABLE public.routines (
   name TEXT NOT NULL,
   description TEXT,
   is_active BOOLEAN DEFAULT true,
+  weekday SMALLINT CHECK (weekday BETWEEN 1 AND 7),
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
 );
@@ -227,6 +228,8 @@ CREATE TRIGGER set_exercises_updated_at
 -- INDICES para optimizacion
 -- ============================================================
 CREATE INDEX IF NOT EXISTS idx_routines_client_id ON public.routines(client_id);
+CREATE UNIQUE INDEX IF NOT EXISTS routines_one_per_client_weekday
+  ON public.routines (client_id, weekday) WHERE weekday IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_exercises_routine_id ON public.exercises(routine_id);
 CREATE INDEX IF NOT EXISTS idx_workout_logs_client_id ON public.workout_logs(client_id);
 CREATE INDEX IF NOT EXISTS idx_workout_logs_date ON public.workout_logs(date DESC);
@@ -252,6 +255,36 @@ BEGIN
     AND is_read = false;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Asignar un día a una rutina desplaza la asignación anterior del mismo cliente.
+CREATE OR REPLACE FUNCTION public.assign_routine_weekday(
+  p_routine_id UUID,
+  p_weekday SMALLINT
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_client_id UUID;
+BEGIN
+  IF p_weekday IS NOT NULL AND p_weekday NOT BETWEEN 1 AND 7 THEN
+    RAISE EXCEPTION 'El día debe estar entre lunes (1) y domingo (7)';
+  END IF;
+
+  SELECT client_id INTO v_client_id FROM public.routines WHERE id = p_routine_id;
+  IF NOT FOUND OR v_client_id IS NULL THEN
+    RAISE EXCEPTION 'Rutina no encontrada';
+  END IF;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended(v_client_id::text, 0));
+  IF p_weekday IS NOT NULL THEN
+    UPDATE public.routines SET weekday = NULL
+    WHERE client_id = v_client_id AND weekday = p_weekday AND id <> p_routine_id;
+  END IF;
+  UPDATE public.routines SET weekday = p_weekday WHERE id = p_routine_id;
+END;
+$$;
 
 -- ============================================================
 -- FUNCION: Obtener o crear cliente (utility login)

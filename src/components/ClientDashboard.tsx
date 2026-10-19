@@ -1,30 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, TrendingDown, TrendingUp as TrendUpIcon, AlertCircle, X, Settings, User as UserIcon, ArrowUp, ArrowDown, Minus, Calendar } from 'lucide-react';
+import { Dumbbell, Timer, Flame, CheckCircle, TrendingUp, MessageSquare, ChevronDown, ChevronUp, Trophy, Send, Play, Pause, FastForward, Image as ImageIcon, Camera, AlertCircle, X, Settings, User as UserIcon, ArrowUp, ArrowDown, Minus, Calendar } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
-import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry } from '../types/fitness';
+import { User, RoutineDay, WorkoutLog, Message, MeasurementsEntry, MeasurementsContext } from '../types/fitness';
 import MeasurementsModal from './MeasurementsModal';
 import { MeasurementCards, WorkoutHistoryChart } from './ProgressCharts';
 import ProgressLineChart from './ProgressLineChart';
 import { getBodyFatColor } from '../lib/bodyFatCalculator';
 import { useWakeLock } from '../hooks/useWakeLock';
 import { useWorkoutPersistence } from '../hooks/useWorkoutPersistence';
+import { WEEKDAYS, sortRoutinesByWeekday, weekdayLabel } from '../lib/weekdays';
 
 interface Props {
-  client: User; coach: User | null; routines: RoutineDay[]; logs: WorkoutLog[]; messages: Message[];
+  client: User; coach: User | null; routines: RoutineDay[]; routinesLoaded: boolean; logs: WorkoutLog[]; messages: Message[];
   unreadMessages?: number;
   onAddLog: (l: WorkoutLog) => void; onSendMessage: (r: string, c: string) => void;
   onMarkMessagesRead?: (senderId: string) => void;
   onUpdateClientStreak: (id: string, s: number) => void; onAddWeightEntry: (id: string, w: number) => void;
-  onAddMeasurementsEntry: (id: string, entry: MeasurementsEntry) => void;
+  onAddMeasurementsEntry: (id: string, entry: MeasurementsEntry, context: MeasurementsContext) => Promise<boolean>;
+  onUpdateClient: (id: string, updates: Partial<User>) => Promise<void>;
   onUpdateClientAvatar: (id: string, file: File) => void;
   onChangePassword?: (id: string, currentPassword: string, newPassword: string) => Promise<void>;
   onLogout: () => void;
 }
 
-export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddWeightEntry, onAddMeasurementsEntry, onUpdateClientAvatar, onChangePassword, onLogout }) => {
+export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, routinesLoaded, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddMeasurementsEntry, onUpdateClient, onUpdateClientAvatar, onChangePassword, onLogout }) => {
   const [tab, setTab] = useState<'w'|'m'|'c'>('w');
   const [progressSubTab, setProgressSubTab] = useState<'summary'|'evolution'|'history'>('summary');
-  const clientRoutines = routines.filter(r => r.clientId === client.id);
+  const clientRoutines = sortRoutinesByWeekday(routines.filter(r => r.clientId === client.id));
+  const unassignedRoutines = clientRoutines.filter(r => r.weekday === null);
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
   const ar = clientRoutines.find(r => r.id === selectedRoutineId) || clientRoutines[0] || null;
   const [expId, setExpId] = useState<string|null>(null);
@@ -75,12 +78,15 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
 
   // Persistencia de entreno en localStorage
   const workoutPersistence = useWorkoutPersistence(client.id);
+  const recoveryCheckedRef = useRef(false);
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [workoutStartTime, setWorkoutStartTime] = useState<number | null>(null);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
   // Al montar: verificar si hay un entreno guardado para recuperar
   useEffect(() => {
+    if (!routinesLoaded || recoveryCheckedRef.current) return;
+    recoveryCheckedRef.current = true;
     const saved = workoutPersistence.load();
     if (saved && saved.selectedRoutineId) {
       const routineStillExists = clientRoutines.some(r => r.id === saved.selectedRoutineId);
@@ -91,7 +97,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [routinesLoaded, routines]);
 
   // Timer automático de duración del entreno
   useEffect(() => {
@@ -277,6 +283,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
     });
 
     const reportMessage = `Reporte: ${ar.name}\n⏱ ${dur}min | Fatiga: ${feel}/5\n\n${reportLines.join('\n\n')}${cmt ? '\n\n💬 ' + cmt : ''}`;
+    setLastSetSummary(reportLines.join('\n\n'));
     console.log('[ClientDashboard] Reporte generado:', reportMessage);
     if (coach && coach.id) {
       try {
@@ -589,21 +596,47 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
           ) : selectedRoutineId === null ? (
             <>
               <div className="bg-[#1c1c1f] border border-[#27272a] p-4 rounded-[12px]">
-                <span className="text-[10px] uppercase  tracking-widest text-[#d4f826] font-bold block">TUS RUTINAS</span>
-                <h2 className="text-base font-extrabold text-white  mt-1">Selecciona una sesión</h2>
+                <span className="text-[10px] uppercase tracking-widest text-[#d4f826] font-bold block">TU SEMANA</span>
+                <h2 className="text-base font-extrabold text-white mt-1">Rutinas por día</h2>
               </div>
               <div className="space-y-3">
-                {clientRoutines.map(r => (
-                  <div key={r.id} onClick={()=>{setSelectedRoutineId(r.id);setCs({});setExpId(null);setWorkoutStartTime(Date.now());setElapsedMinutes(0);}} className="bg-[#141416] border border-[#27272a] hover:border-[#d4f826] rounded-[12px] p-4 cursor-pointer transition-all">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-sm font-bold text-white">{r.name}</h3>
-                        <p className="text-[11px] text-[#8e8e93] mt-0.5">{r.exercises.length} ejercicios • {r.description || 'Sin descripción'}</p>
-                      </div>
-                      <ChevronDown className="w-4 h-4 text-[#8e8e93] rotate-[-90deg]" />
+                {WEEKDAYS.map(day => {
+                  const routine = clientRoutines.find(r => r.weekday === day.value);
+                  return (
+                    <div key={day.value} className={`bg-[#141416] border rounded-[12px] p-4 ${routine ? 'border-[#27272a]' : 'border-[#27272a]/60 opacity-70'}`}>
+                      <p className="text-[10px] uppercase tracking-widest text-[#d4f826] font-bold mb-1">{day.label}</p>
+                      {routine ? (
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedRoutineId(routine.id); setCs({}); setExpId(null); setWorkoutStartTime(Date.now()); setElapsedMinutes(0); }}
+                          className="w-full flex items-center justify-between text-left hover:text-[#d4f826] transition-colors"
+                        >
+                          <span>
+                            <span className="block text-sm font-bold text-white">{routine.name}</span>
+                            <span className="block text-[11px] text-[#8e8e93] mt-0.5">{routine.exercises.length} ejercicios • {routine.description || 'Sin descripción'}</span>
+                          </span>
+                          <ChevronDown className="w-4 h-4 text-[#8e8e93] rotate-[-90deg] shrink-0" />
+                        </button>
+                      ) : <p className="text-xs text-[#8e8e93]">Descanso · sin rutina asignada</p>}
                     </div>
+                  );
+                })}
+                {unassignedRoutines.length > 0 && (
+                  <div className="pt-3 space-y-2">
+                    <h3 className="text-xs font-bold text-[#8e8e93] uppercase">Rutinas sin día asignado</h3>
+                    {unassignedRoutines.map(routine => (
+                      <button
+                        key={routine.id}
+                        type="button"
+                        onClick={() => { setSelectedRoutineId(routine.id); setCs({}); setExpId(null); setWorkoutStartTime(Date.now()); setElapsedMinutes(0); }}
+                        className="w-full bg-[#141416] border border-[#27272a] rounded-[12px] p-4 text-left hover:border-[#d4f826]"
+                      >
+                        <span className="block text-sm font-bold text-white">{routine.name}</span>
+                        <span className="block text-[11px] text-[#8e8e93]">{routine.exercises.length} ejercicios</span>
+                      </button>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </>
           ) : ar ? (
@@ -613,6 +646,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                   <div>
                     <span className="text-[10px] uppercase  tracking-widest text-[#d4f826] font-bold block">SESIÓN EN CURSO</span>
                     <h2 className="text-base font-extrabold text-white  mt-1">{ar.name}</h2>
+                    <p className="text-[10px] text-[#8e8e93] mt-1">{weekdayLabel(ar.weekday)}</p>
                   </div>
                   <button onClick={()=>{setSelectedRoutineId(null);setCs({});setExpId(null);}} className="text-[10px] text-[#8e8e93] hover:text-white underline ">Cambiar rutina</button>
                 </div>
@@ -620,7 +654,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
               </div>
               <div className="space-y-3">{(() => {
                   const sorted = ar.exercises.slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
-                  const groups = [];
+                  const groups: { type: 'superset' | 'single'; group?: string; exercises: typeof sorted }[] = [];
                   for (const ex of sorted) {
                     if (ex.supersetGroup) {
                       const last = groups[groups.length - 1];
@@ -650,7 +684,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
                             </div>
                           </div>
                           <div className="p-3 space-y-2">
-                            {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex, idx) => {
+                          {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex) => {
                               const ie = expId === ex.id;
                               let dc = 0;
                               for (let s = 1; s <= gSets(ex); s++) { if (cs[`${ex.id}-${s}`]) dc++; }
@@ -957,14 +991,14 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, logs
       <MeasurementsModal
         isOpen={showMeasurementsModal}
         onClose={() => setShowMeasurementsModal(false)}
-        onSave={(entry) => onAddMeasurementsEntry(client.id, entry)}
+        onSave={async (entry, context) => {
+          const saved = await onAddMeasurementsEntry(client.id, entry, context);
+          if (saved) setProgressSubTab('summary');
+          return saved;
+        }}
         lastMeasurements={client.measurementsHistory?.[0]}
         clientGender={client.gender}
         clientAge={client.age}
-        onAgeChange={(age) => {
-          // Client cannot update their own age directly via this modal without onUpdateClient
-          // We leave this empty or pass undefined - the modal will use its internal state
-        }}
       />
 
       {/* Modal de recuperación de entreno interrumpido */}

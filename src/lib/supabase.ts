@@ -52,6 +52,7 @@ export type Database = {
           name: string;
           description: string | null;
           is_active: boolean;
+          weekday: number | null;
           created_at: string;
           updated_at: string;
         };

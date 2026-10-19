@@ -8,7 +8,8 @@ import {
   User as UserIcon, ClipboardList, ChevronDown, ChevronUp, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { RulerIcon } from './RulerIcon';
-import { User, RoutineDay, Exercise, Message, MeasurementsEntry } from '../types/fitness';
+import { User, RoutineDay, Exercise, Message, MeasurementsEntry, MeasurementsContext, Weekday } from '../types/fitness';
+import { WEEKDAYS, sortRoutinesByWeekday, weekdayLabel } from '../lib/weekdays';
 import { clientsService, exercisesService, storageService } from '../lib/supabase-auth';
 import MeasurementsModal from './MeasurementsModal';
 import { MeasurementCards } from './ProgressCharts';
@@ -23,7 +24,9 @@ interface CoachDashboardProps {
   messages: Message[];
   unreadMessages?: number;
   onAddClient: (newClient: Omit<User, 'id' | 'adherenceRate' | 'paymentStatus' | 'nextPaymentDate'> & { password: string; initialMeasurements?: MeasurementsEntry; firstPaymentDate?: string }) => Promise<User | undefined>;
-  onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => void;
+  onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt' | 'weekday'>) => void;
+  onAssignRoutineWeekday: (routineId: string, weekday: Weekday | null) => Promise<boolean>;
+  onDeleteRoutine: (routineId: string) => Promise<boolean>;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
   onUpdateExercise: (routineDayId: string, exerciseId: string, updates: Partial<Exercise>) => void;
   onReorderExercises: (routineDayId: string, exerciseId: string, direction: 'up' | 'down') => void;
@@ -35,7 +38,7 @@ interface CoachDashboardProps {
   onMarkMessagesRead?: (senderId: string) => void;
   onUploadClientAvatar: (clientId: string, file: File) => void;
   onUpdateClient: (clientId: string, updates: Partial<User>) => void;
-  onAddMeasurementsEntry: (clientId: string, entry: MeasurementsEntry) => void;
+  onAddMeasurementsEntry: (clientId: string, entry: MeasurementsEntry, context: MeasurementsContext) => Promise<boolean>;
   onLogout: () => void;
 }
 
@@ -47,6 +50,8 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   unreadMessages = 0,
   onAddClient,
   onAddRoutineDay,
+  onAssignRoutineWeekday,
+  onDeleteRoutine,
   onAddExercise,
   onUpdateExercise,
   onReorderExercises,
@@ -151,9 +156,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [showAddRoutineModal, setShowAddRoutineModal] = useState(false);
   const [newRoutineName, setNewRoutineName] = useState('');
   const [newRoutineDesc, setNewRoutineDesc] = useState('');
+  const [routineActionId, setRoutineActionId] = useState<string | null>(null);
 
   // Exercise Form State
-  const [selectedPreset, setSelectedPreset] = useState('');
   const [customExerciseName, setCustomExerciseName, clearCustomExerciseName] = usePersistentState('coach_ex_name', '');
   const [exerciseCategory, setExerciseCategory, clearExerciseCategory] = usePersistentState<Exercise['category']>('coach_ex_cat', 'Chest');
   const [exerciseSets, setExerciseSets, clearExerciseSets] = usePersistentState('coach_ex_sets', 4);
@@ -192,7 +197,6 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     routineId: string;
   } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
-  const [editSelectedPreset, setEditSelectedPreset] = useState('');
   const [editCustomExerciseName, setEditCustomExerciseName, clearEditCustomExerciseName] = usePersistentState('coach_edit_ex_name', '');
   const [editExerciseCategory, setEditExerciseCategory, clearEditExerciseCategory] = usePersistentState<Exercise['category']>('coach_edit_ex_cat', 'Chest');
   const [editExerciseSets, setEditExerciseSets, clearEditExerciseSets] = usePersistentState('coach_edit_ex_sets', 4);
@@ -252,7 +256,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   );
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
-  const clientRoutines = routines.filter(r => r.clientId === selectedClientId);
+  const clientRoutines = sortRoutinesByWeekday(routines.filter(r => r.clientId === selectedClientId));
   
   // Handle selfie upload (crear nuevo cliente)
   const handleSelfieUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -420,6 +424,27 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
     setNewRoutineName('');
     setNewRoutineDesc('');
     setShowAddRoutineModal(false);
+  };
+
+  const handleRoutineDayChange = async (routineId: string, weekday: Weekday | null) => {
+    setRoutineActionId(routineId);
+    try {
+      await onAssignRoutineWeekday(routineId, weekday);
+    } finally {
+      setRoutineActionId(null);
+    }
+  };
+
+  const handleDeleteRoutine = async (routine: RoutineDay) => {
+    if (!window.confirm(`¿Eliminar la rutina "${routine.name}" y todos sus ejercicios?`)) return;
+    setRoutineActionId(routine.id);
+    try {
+      if (await onDeleteRoutine(routine.id) && expandedRoutineId === routine.id) {
+        setExpandedRoutineId(null);
+      }
+    } finally {
+      setRoutineActionId(null);
+    }
   };
 
   // Handle adding exercise
@@ -1274,15 +1299,15 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="text-sm uppercase tracking-wider text-white font-bold flex items-center gap-2">
-                          <Dumbbell className="w-4 h-4 text-[#d4f826]" /> Dias de Rutina
+                          <Dumbbell className="w-4 h-4 text-[#d4f826]" /> Rutinas
                         </h3>
-                        <p className="text-xs text-[#8e8e93] mt-0.5">Estructura las sesiones semanales</p>
+                        <p className="text-xs text-[#8e8e93] mt-0.5">Asigna una rutina por día; la anterior queda sin día al reemplazarla.</p>
                       </div>
                       <button
                         onClick={() => setShowAddRoutineModal(true)}
                         className="bg-transparent border border-[#3f3f46] text-white hover:border-[#d4f826] hover:text-[#d4f826] text-[11px] font-semibold py-1.5 px-3 rounded-[28px] transition-all flex items-center gap-1"
                       >
-                        <Plus className="w-3.5 h-3.5" /> Agregar Dia
+                        <Plus className="w-3.5 h-3.5" /> Crear rutina
                       </button>
                     </div>
 
@@ -1304,11 +1329,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                               <div>
                                 <div className="flex items-center gap-2">
                                   <h4 className="text-sm font-bold text-white">{routine.name}</h4>
-                                  {routine.isActive ? (
-                                    <span className="text-[9px] bg-[#d4f826]/10 text-[#d4f826] px-1.5 py-0.5 rounded-full">ACTIVO</span>
-                                  ) : (
-                                    <span className="text-[9px] bg-[#27272a] text-[#8e8e93] px-1.5 py-0.5 rounded-full">RESERVA</span>
-                                  )}
+                                  <span className="text-[9px] bg-[#27272a] text-[#d4f826] px-1.5 py-0.5 rounded-full">{weekdayLabel(routine.weekday)}</span>
                                 </div>
                                 {routine.description && (
                                   <p className="text-xs text-[#8e8e93] mt-0.5">{routine.description}</p>
@@ -1318,12 +1339,35 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                 </p>
                               </div>
                             </div>
-                            <span className="text-[10px] text-[#8e8e93]">Asignado: {routine.createdAt}</span>
+                            <span className="text-[10px] text-[#8e8e93]">Creada: {routine.createdAt}</span>
                           </button>
 
                           {/* Exercise Cards with Images — Collapsible */}
                           {expandedRoutineId === routine.id && (
                           <div className="p-4 space-y-3">
+                            <div className="flex flex-wrap items-end justify-between gap-3 bg-[#0a0a0c] border border-[#27272a] rounded-[12px] p-3">
+                              <div className="min-w-[180px] flex-1">
+                                <label htmlFor={`routine-day-${routine.id}`} className="block text-[10px] text-[#a1a1aa] mb-1 uppercase">Día de la semana</label>
+                                <select
+                                  id={`routine-day-${routine.id}`}
+                                  value={routine.weekday ?? ''}
+                                  disabled={routineActionId !== null}
+                                  onChange={(event) => handleRoutineDayChange(routine.id, event.target.value ? Number(event.target.value) as Weekday : null)}
+                                  className="w-full bg-[#18181b] border border-[#3f3f46] rounded-lg text-xs p-2 text-white focus:outline-none focus:border-[#d4f826]"
+                                >
+                                  <option value="">Sin día asignado</option>
+                                  {WEEKDAYS.map(day => <option key={day.value} value={day.value}>{day.label}</option>)}
+                                </select>
+                              </div>
+                              <button
+                                type="button"
+                                disabled={routineActionId !== null}
+                                onClick={() => handleDeleteRoutine(routine)}
+                                className="flex items-center gap-1 text-[#ff5449] border border-[#ff5449]/30 rounded-lg px-3 py-2 text-xs hover:bg-[#ff5449]/10 disabled:opacity-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Eliminar rutina
+                              </button>
+                            </div>
                             {routine.exercises.length === 0 ? (
                               <p className="text-xs text-[#52525b] italic p-2 text-center">No hay ejercicios cargados para este dia.</p>
                             ) : (
@@ -1352,7 +1396,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                                             <span className="text-[9px] text-[#8e8e93]">{group.exercises.length} ejercicios • {group.exercises[0]?.sets} series</span>
                                           </div>
                                           <div className="p-3 space-y-2">
-                                            {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex, idx, arr) => (
+                                            {group.exercises.sort((a, b) => (a.supersetOrder || 0) - (b.supersetOrder || 0)).map((ex) => (
                                               <div key={ex.id} className="bg-[#141416] border border-[#27272a] rounded-[10px] overflow-hidden flex flex-col sm:flex-row">
                                                 {/* Exercise Image */}
                                                 {ex.imageUrl ? (
@@ -2112,9 +2156,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 md:p-6 relative">
             <h3 className="text-base font-bold tracking-wider text-white mb-1 uppercase">
-              <span className="text-[#d4f826]">Crear</span> Nuevo Dia de Rutina
+              <span className="text-[#d4f826]">Crear</span> Nueva Rutina
             </h3>
-            <p className="text-xs text-[#8e8e93] mb-4">Anade una sesion a la semana del deportista.</p>
+            <p className="text-xs text-[#8e8e93] mb-4">Después de crearla, podrás asignarla a un día de la semana.</p>
 
             <form onSubmit={handleCreateRoutineDay} className="space-y-4">
               <div>
@@ -2442,25 +2486,16 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       <MeasurementsModal
         isOpen={showMeasurementsModal}
         onClose={() => setShowMeasurementsModal(false)}
-        onSave={(entry) => {
+        onSave={(entry, context) => {
           if (measurementsClientId) {
-            onAddMeasurementsEntry(measurementsClientId, entry);
+            return onAddMeasurementsEntry(measurementsClientId, entry, context);
           }
+          return Promise.resolve(false);
         }}
         lastMeasurements={clients.find(c => c.id === measurementsClientId)?.measurementsHistory?.[0]}
         clientName={clients.find(c => c.id === measurementsClientId)?.name}
         clientGender={clients.find(c => c.id === measurementsClientId)?.gender}
-        onGenderChange={(g) => {
-          if (measurementsClientId) {
-            onUpdateClient(measurementsClientId, { gender: g });
-          }
-        }}
         clientAge={clients.find(c => c.id === measurementsClientId)?.age}
-        onAgeChange={(a) => {
-          if (measurementsClientId) {
-            onUpdateClient(measurementsClientId, { age: a });
-          }
-        }}
       />
 
       {/* Modales del catálogo de ejercicios */}

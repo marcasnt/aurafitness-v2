@@ -39,7 +39,7 @@ function calculateUSNavy495({ gender, height, neck, waist, hips }: {
   if (!height || !neck || !waist) return null;
   if (gender === 'female' && !hips) return null;
   if (gender === 'male' && waist <= neck) return null;
-  if (gender === 'female' && (waist + hips) <= neck) return null;
+  if (gender === 'female' && (waist + (hips ?? 0)) <= neck) return null;
 
   const log10 = Math.log10;
   let bodyFat: number;
@@ -80,6 +80,9 @@ function calculateDeurenberg({ gender, height, weight, age }: Pick<BodyFatInput,
  * 2. Si NO hay perimetros → Deurenberg (IMC + edad + genero)
  */
 export function calculateBodyFat(input: BodyFatInput): number | null {
+  if (!Number.isFinite(input.height) || input.height <= 0 ||
+      !Number.isFinite(input.weight) || input.weight <= 0 ||
+      !Number.isFinite(input.age) || input.age <= 0) return null;
   const hasPerimeters = input.waist && input.waist > 0 && input.neck && input.neck > 0;
   const hasHipsForFemale = input.gender === 'female' ? (input.hips && input.hips > 0) : true;
 
@@ -95,7 +98,7 @@ export function calculateBodyFat(input: BodyFatInput): number | null {
     result = calculateDeurenberg(input);
   }
 
-  if (result === null) return null;
+  if (result === null || !Number.isFinite(result)) return null;
 
   // Clamp a rangos fisiologicamente razonables para fitness
   // Hombres: 2% (esencial) a 35% (obesidad clase I)

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { User, RoutineDay, WorkoutLog, Message, Exercise as FitnessExercise } from '../types/fitness';
+import { User, RoutineDay, WorkoutLog, Message, Weekday, Exercise as FitnessExercise } from '../types/fitness';
 import { Database } from './supabase';
 import { addOneMonth } from './dateHelpers';
 import bcrypt from 'bcryptjs';
@@ -39,6 +39,7 @@ const mapRoutineToRoutineDay = (r: Routine, exercises: Exercise[]): RoutineDay =
   name: r.name,
   description: r.description || undefined,
   isActive: r.is_active,
+  weekday: r.weekday as Weekday | null,
   exercises: exercises.map(e => ({
     id: e.id,
     name: e.name,
@@ -311,7 +312,7 @@ export const routinesService = {
     return result;
   },
 
-  async create(routine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>): Promise<RoutineDay> {
+  async create(routine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt' | 'weekday'>): Promise<RoutineDay> {
     const { data: routines, error: countError } = await supabase
       .from('routines')
       .select('id')
@@ -326,6 +327,7 @@ export const routinesService = {
         name: routine.name,
         description: routine.description || null,
         is_active: isFirst || routine.isActive,
+        weekday: null,
       })
       .select()
       .single();
@@ -346,6 +348,14 @@ export const routinesService = {
 
   async delete(id: string): Promise<void> {
     const { error } = await supabase.from('routines').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async assignWeekday(id: string, weekday: Weekday | null): Promise<void> {
+    const { error } = await supabase.rpc('assign_routine_weekday', {
+      p_routine_id: id,
+      p_weekday: weekday,
+    });
     if (error) throw error;
   },
 };

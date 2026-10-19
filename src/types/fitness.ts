@@ -23,6 +23,11 @@ export interface MeasurementsEntry extends BodyMeasurements {
   recordedBy?: 'coach' | 'client'; // quién registró esta entrada
 }
 
+export interface MeasurementsContext {
+  gender: 'male' | 'female';
+  age: number;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -67,12 +72,16 @@ export interface Exercise {
   supersetOrder?: number; // 1, 2, 3... orden dentro del grupo
 }
 
+// ISO weekday: lunes = 1, domingo = 7.
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
 export interface RoutineDay {
   id: string;
   clientId: string;
   name: string; // e.g., "Día 1: Empuje - Hipertrofia"
   description?: string;
   isActive: boolean;
+  weekday: Weekday | null;
   exercises: Exercise[];
   createdAt: string;
 }

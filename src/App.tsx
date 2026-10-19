@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { User, RoutineDay, WorkoutLog, Message, Exercise } from './types/fitness';
+import { User, RoutineDay, WorkoutLog, Message, Exercise, Weekday, MeasurementsContext } from './types/fitness';
 import { LoginScreen } from './components/LoginScreen';
 import { CoachDashboard } from './components/CoachDashboard';
 import { ClientDashboard } from './components/ClientDashboard';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { supabase } from './lib/supabase';
 import { getAutoPaymentStatus } from './lib/dateHelpers';
+import { calculateBodyFat } from './lib/bodyFatCalculator';
 import {
   authService,
   clientsService,
@@ -20,6 +21,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [clients, setClients] = useState<User[]>([]);
   const [routines, setRoutines] = useState<RoutineDay[]>([]);
+  const [routinesLoaded, setRoutinesLoaded] = useState(false);
   const [logs, setLogs] = useState<WorkoutLog[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -48,7 +50,10 @@ export default function App() {
     try {
       if (clientId) {
         const data = await routinesService.getByClient(clientId);
-        if (mountedRef.current) setRoutines(data);
+        if (mountedRef.current) {
+          setRoutines(data);
+          setRoutinesLoaded(true);
+        }
         return data;
       }
       if (currentUser?.role === 'coach') {
@@ -208,6 +213,7 @@ export default function App() {
   }, [autoUpdatePaymentStatuses]);
 
   const handleLoginSuccess = (user: User) => {
+    setRoutinesLoaded(false);
     setCurrentUser(user);
     try {
       sessionStorage.setItem('aura_session', JSON.stringify({ userId: user.id, role: user.role }));
@@ -226,6 +232,7 @@ export default function App() {
     setCurrentUser(null);
     setClients([]);
     setRoutines([]);
+    setRoutinesLoaded(false);
     setLogs([]);
     setMessages([]);
     setCoachProfile(null);
@@ -272,13 +279,40 @@ export default function App() {
     }
   };
 
-  const handleAddRoutineDay = async (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt'>) => {
+  const handleAddRoutineDay = async (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt' | 'weekday'>) => {
     try {
       const created = await routinesService.create(newRoutine);
       if (mountedRef.current) setRoutines(prev => [...prev, created]);
     } catch (e: any) {
       console.error('Error adding routine:', e);
       showError('Error al crear rutina: ' + (e.message || 'desconocido'));
+    }
+  };
+
+  const handleAssignRoutineWeekday = async (routineId: string, weekday: Weekday | null): Promise<boolean> => {
+    const clientId = routines.find(r => r.id === routineId)?.clientId;
+    if (!clientId) return false;
+    try {
+      await routinesService.assignWeekday(routineId, weekday);
+      const updated = await routinesService.getByClient(clientId);
+      if (mountedRef.current) setRoutines(prev => [...prev.filter(r => r.clientId !== clientId), ...updated]);
+      return true;
+    } catch (e: any) {
+      console.error('Error assigning routine weekday:', e);
+      showError('Error al asignar día: ' + (e.message || 'desconocido'));
+      return false;
+    }
+  };
+
+  const handleDeleteRoutine = async (routineId: string): Promise<boolean> => {
+    try {
+      await routinesService.delete(routineId);
+      if (mountedRef.current) setRoutines(prev => prev.filter(r => r.id !== routineId));
+      return true;
+    } catch (e: any) {
+      console.error('Error deleting routine:', e);
+      showError('Error al eliminar rutina: ' + (e.message || 'desconocido'));
+      return false;
     }
   };
 
@@ -507,14 +541,23 @@ export default function App() {
     }
   };
 
-  const handleAddMeasurementsEntry = async (clientId: string, entry: import('./types/fitness').MeasurementsEntry) => {
-    if (!currentUser) return;
-    const client = clients.find(c => c.id === clientId);
+  const handleAddMeasurementsEntry = async (clientId: string, entry: import('./types/fitness').MeasurementsEntry, context: MeasurementsContext): Promise<boolean> => {
+    if (!currentUser) return false;
+    const client = clients.find(c => c.id === clientId) || (currentUser.id === clientId ? currentUser : null);
     const currentHistory = client?.measurementsHistory || [];
 
     // Agregar quién registró la entrada
     const entryWithRecorder = {
       ...entry,
+      bodyFat: calculateBodyFat({
+        gender: context.gender,
+        age: context.age,
+        height: entry.height,
+        weight: entry.weight,
+        neck: entry.neck,
+        waist: entry.waist,
+        hips: entry.hips,
+      }) ?? undefined,
       recordedBy: currentUser.id === clientId ? 'client' as const : 'coach' as const,
     };
 
@@ -542,6 +585,8 @@ export default function App() {
 
     try {
       const updated = await clientsService.update(clientId, {
+        gender: context.gender,
+        age: context.age,
         measurementsHistory: newHistory,
         weightHistory: newWeightHistory,
       });
@@ -549,9 +594,11 @@ export default function App() {
       if (currentUser.id === clientId) {
         setCurrentUser(updated);
       }
+      return true;
     } catch (e: any) {
       console.error('Error adding measurements entry:', e);
       showError('Error al guardar medidas');
+      return false;
     }
   };
 
@@ -598,6 +645,8 @@ export default function App() {
               onAddClient={handleAddClient}
               onUploadClientAvatar={handleUploadClientAvatar}
               onAddRoutineDay={handleAddRoutineDay}
+              onAssignRoutineWeekday={handleAssignRoutineWeekday}
+              onDeleteRoutine={handleDeleteRoutine}
               onAddExercise={handleAddExercise}
               onUpdateExercise={handleUpdateExercise}
               onReorderExercises={handleReorderExercises}
@@ -616,6 +665,7 @@ export default function App() {
               client={currentUser}
               coach={coachProfile}
               routines={routines}
+              routinesLoaded={routinesLoaded}
               logs={logs}
               messages={messages}
               unreadMessages={unreadMessages}
@@ -633,6 +683,7 @@ export default function App() {
               }}
               onAddWeightEntry={handleAddWeightEntry}
               onAddMeasurementsEntry={handleAddMeasurementsEntry}
+              onUpdateClient={handleUpdateClient}
               onUpdateClientAvatar={async (id, file) => {
                 try {
                   const url = await storageService.uploadAvatar(id, file);
