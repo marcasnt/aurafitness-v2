@@ -68,6 +68,7 @@ export type Database = {
           sets: number;
           reps: string;
           weight: number;
+          set_details: { reps: number; weight: number }[] | null;
           rest_time: number;
           notes: string | null;
           image_url: string | null;

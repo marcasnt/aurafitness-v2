@@ -47,6 +47,7 @@ const mapRoutineToRoutineDay = (r: Routine, exercises: Exercise[]): RoutineDay =
     sets: e.sets,
     reps: e.reps,
     weight: e.weight,
+    setDetails: e.set_details || undefined,
     restTime: e.rest_time,
     notes: e.notes || undefined,
     imageUrl: e.image_url || undefined,
@@ -358,6 +359,15 @@ export const routinesService = {
     });
     if (error) throw error;
   },
+
+  async copyToClient(sourceRoutineId: string, targetClientId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('copy_routine_to_client', {
+      p_source_routine_id: sourceRoutineId,
+      p_target_client_id: targetClientId,
+    });
+    if (error) throw error;
+    return data as string;
+  },
 };
 
 export const exercisesService = {
@@ -394,6 +404,7 @@ export const exercisesService = {
         sets: exercise.sets,
         reps: exercise.reps,
         weight: exercise.weight,
+        set_details: exercise.setDetails || null,
         rest_time: exercise.restTime,
         notes: exercise.notes || null,
         image_url: exercise.imageUrl || null,
@@ -415,6 +426,7 @@ export const exercisesService = {
     if (updates.sets !== undefined) updateData.sets = updates.sets;
     if (updates.reps !== undefined) updateData.reps = updates.reps;
     if (updates.weight !== undefined) updateData.weight = updates.weight;
+    if (updates.setDetails !== undefined) updateData.set_details = updates.setDetails;
     if (updates.restTime !== undefined) updateData.rest_time = updates.restTime;
     if (updates.notes !== undefined) updateData.notes = updates.notes || null;
     if (updates.imageUrl !== undefined) updateData.image_url = updates.imageUrl || null;

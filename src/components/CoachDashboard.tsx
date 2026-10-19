@@ -27,6 +27,7 @@ interface CoachDashboardProps {
   onAddRoutineDay: (newRoutine: Omit<RoutineDay, 'id' | 'exercises' | 'createdAt' | 'weekday'>) => void;
   onAssignRoutineWeekday: (routineId: string, weekday: Weekday | null) => Promise<boolean>;
   onDeleteRoutine: (routineId: string) => Promise<boolean>;
+  onImportRoutine: (sourceRoutineId: string, targetClientId: string) => Promise<string | null>;
   onAddExercise: (routineDayId: string, exercise: Omit<Exercise, 'id'>) => void;
   onUpdateExercise: (routineDayId: string, exerciseId: string, updates: Partial<Exercise>) => void;
   onReorderExercises: (routineDayId: string, exerciseId: string, direction: 'up' | 'down') => void;
@@ -52,6 +53,7 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   onAddRoutineDay,
   onAssignRoutineWeekday,
   onDeleteRoutine,
+  onImportRoutine,
   onAddExercise,
   onUpdateExercise,
   onReorderExercises,
@@ -154,6 +156,10 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
   const [avatarLightbox, setAvatarLightbox] = useState(false);
 
   const [showAddRoutineModal, setShowAddRoutineModal] = useState(false);
+  const [showImportRoutineModal, setShowImportRoutineModal] = useState(false);
+  const [importSourceClientId, setImportSourceClientId] = useState('');
+  const [importSourceRoutineId, setImportSourceRoutineId] = useState('');
+  const [importSaving, setImportSaving] = useState(false);
   const [newRoutineName, setNewRoutineName] = useState('');
   const [newRoutineDesc, setNewRoutineDesc] = useState('');
   const [routineActionId, setRoutineActionId] = useState<string | null>(null);
@@ -257,6 +263,9 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
 
   const selectedClient = clients.find(c => c.id === selectedClientId);
   const clientRoutines = sortRoutinesByWeekday(routines.filter(r => r.clientId === selectedClientId));
+  const importSourceClients = clients.filter(c => c.id !== selectedClientId && routines.some(r => r.clientId === c.id));
+  const importSourceRoutines = routines.filter(r => r.clientId === importSourceClientId);
+  const importPreview = importSourceRoutines.find(r => r.id === importSourceRoutineId);
   
   // Handle selfie upload (crear nuevo cliente)
   const handleSelfieUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -444,6 +453,23 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
       }
     } finally {
       setRoutineActionId(null);
+    }
+  };
+
+  const handleImportRoutine = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClientId || !importPreview || importSaving) return;
+    setImportSaving(true);
+    try {
+      const importedId = await onImportRoutine(importPreview.id, selectedClientId);
+      if (importedId) {
+        setShowImportRoutineModal(false);
+        setImportSourceClientId('');
+        setImportSourceRoutineId('');
+        setExpandedRoutineId(importedId);
+      }
+    } finally {
+      setImportSaving(false);
     }
   };
 
@@ -1303,12 +1329,24 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                         </h3>
                         <p className="text-xs text-[#8e8e93] mt-0.5">Asigna una rutina por día; la anterior queda sin día al reemplazarla.</p>
                       </div>
-                      <button
-                        onClick={() => setShowAddRoutineModal(true)}
-                        className="bg-transparent border border-[#3f3f46] text-white hover:border-[#d4f826] hover:text-[#d4f826] text-[11px] font-semibold py-1.5 px-3 rounded-[28px] transition-all flex items-center gap-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" /> Crear rutina
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowImportRoutineModal(true)}
+                          disabled={importSourceClients.length === 0}
+                          title={importSourceClients.length === 0 ? 'No hay rutinas de otros atletas para importar' : undefined}
+                          className="bg-transparent border border-[#3f3f46] text-white hover:border-[#d4f826] hover:text-[#d4f826] text-[11px] font-semibold py-1.5 px-3 rounded-[28px] transition-all flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Importar rutina
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddRoutineModal(true)}
+                          className="bg-transparent border border-[#3f3f46] text-white hover:border-[#d4f826] hover:text-[#d4f826] text-[11px] font-semibold py-1.5 px-3 rounded-[28px] transition-all flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Crear rutina
+                        </button>
+                      </div>
                     </div>
 
                     {/* Routine Cards */}
@@ -2144,6 +2182,65 @@ export const CoachDashboard: React.FC<CoachDashboardProps> = ({
                 </button>
                 <button type="submit" className="bg-[#d4f826] text-black font-bold text-xs py-2 px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono">
                   GUARDAR ATLETA
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: IMPORT ROUTINE FROM ANOTHER CLIENT */}
+      {showImportRoutineModal && selectedClient && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+          <div role="dialog" aria-modal="true" aria-labelledby="import-routine-title" className="bg-[#141416] border border-[#27272a] rounded-[16px] w-full max-w-md p-5 md:p-6 relative">
+            <h3 id="import-routine-title" className="text-base font-bold tracking-wider text-white mb-1 uppercase">
+              <span className="text-[#d4f826]">Importar</span> rutina
+            </h3>
+            <p className="text-xs text-[#8e8e93] mb-4">
+              Se copiará para {selectedClient.name} con todos sus ejercicios. Quedará sin día asignado y podrás editarla por separado.
+            </p>
+            <form onSubmit={handleImportRoutine} className="space-y-4">
+              <div>
+                <label htmlFor="import-source-client" className="block text-[11px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Atleta de origen</label>
+                <select
+                  id="import-source-client"
+                  required
+                  value={importSourceClientId}
+                  disabled={importSaving}
+                  onChange={e => { setImportSourceClientId(e.target.value); setImportSourceRoutineId(''); }}
+                  className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826]"
+                >
+                  <option value="">Selecciona un atleta</option>
+                  {importSourceClients.map(client => <option key={client.id} value={client.id}>{client.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="import-source-routine" className="block text-[11px] text-[#a1a1aa] mb-1 font-mono uppercase font-semibold">Rutina</label>
+                <select
+                  id="import-source-routine"
+                  required
+                  value={importSourceRoutineId}
+                  disabled={!importSourceClientId || importSaving}
+                  onChange={e => setImportSourceRoutineId(e.target.value)}
+                  className="w-full bg-[#18181b] border border-[#27272a] rounded-xl text-xs p-2.5 text-white focus:outline-none focus:border-[#d4f826] disabled:opacity-50"
+                >
+                  <option value="">Selecciona una rutina</option>
+                  {importSourceRoutines.map(routine => <option key={routine.id} value={routine.id}>{routine.name} · {routine.exercises.length} ejercicios</option>)}
+                </select>
+              </div>
+              {importPreview && (
+                <div className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 text-xs text-[#a1a1aa]">
+                  <p className="text-white font-semibold">{importPreview.name}</p>
+                  {importPreview.description && <p className="mt-1">{importPreview.description}</p>}
+                  <p className="mt-2">{importPreview.exercises.length} ejercicio{importPreview.exercises.length !== 1 ? 's' : ''}: {importPreview.exercises.map(e => e.name).join(', ') || 'sin ejercicios'}</p>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" disabled={importSaving} onClick={() => setShowImportRoutineModal(false)} className="bg-transparent hover:bg-[#18181b] text-[#a1a1aa] text-xs font-semibold py-2 px-4 rounded-xl transition-all disabled:opacity-50">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={!importPreview || importSaving} className="bg-[#d4f826] text-black font-bold text-xs py-2 px-4 rounded-xl hover:bg-[#e2fa52] transition-all font-mono disabled:opacity-50 disabled:cursor-not-allowed">
+                  {importSaving ? 'COPIANDO...' : 'IMPORTAR RUTINA'}
                 </button>
               </div>
             </form>

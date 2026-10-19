@@ -316,6 +316,19 @@ export default function App() {
     }
   };
 
+  const handleImportRoutine = async (sourceRoutineId: string, targetClientId: string): Promise<string | null> => {
+    try {
+      const newRoutineId = await routinesService.copyToClient(sourceRoutineId, targetClientId);
+      const updated = await routinesService.getByClient(targetClientId);
+      if (mountedRef.current) setRoutines(prev => [...prev.filter(r => r.clientId !== targetClientId), ...updated]);
+      return newRoutineId;
+    } catch (e: any) {
+      console.error('Error importing routine:', e);
+      showError('Error al importar rutina: ' + (e.message || 'desconocido'));
+      return null;
+    }
+  };
+
   const handleAddExercise = async (routineDayId: string, exercise: Omit<Exercise, 'id'>) => {
     try {
       await exercisesService.create(routineDayId, exercise);
@@ -647,6 +660,7 @@ export default function App() {
               onAddRoutineDay={handleAddRoutineDay}
               onAssignRoutineWeekday={handleAssignRoutineWeekday}
               onDeleteRoutine={handleDeleteRoutine}
+              onImportRoutine={handleImportRoutine}
               onAddExercise={handleAddExercise}
               onUpdateExercise={handleUpdateExercise}
               onReorderExercises={handleReorderExercises}
