@@ -26,10 +26,9 @@ interface Props {
 export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, routinesLoaded, logs, messages, unreadMessages = 0, onAddLog, onSendMessage, onMarkMessagesRead, onUpdateClientStreak, onAddMeasurementsEntry, onUpdateClient, onUpdateClientAvatar, onChangePassword, onLogout }) => {
   const [tab, setTab] = useState<'w'|'m'|'c'>('w');
   const [progressSubTab, setProgressSubTab] = useState<'summary'|'evolution'|'history'>('summary');
-  const clientRoutines = sortRoutinesByWeekday(routines.filter(r => r.clientId === client.id));
-  const unassignedRoutines = clientRoutines.filter(r => r.weekday === null);
+  const clientRoutines = sortRoutinesByWeekday(routines.filter(r => r.clientId === client.id && r.weekday !== null));
   const [selectedRoutineId, setSelectedRoutineId] = useState<string | null>(null);
-  const ar = clientRoutines.find(r => r.id === selectedRoutineId) || clientRoutines[0] || null;
+  const ar = clientRoutines.find(r => r.id === selectedRoutineId) || null;
   const [expId, setExpId] = useState<string|null>(null);
   const [cs, setCs] = useState<Record<string,boolean>>({});
   const [lr, setLr] = useState<Record<string,number>>({});
@@ -73,7 +72,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, rout
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Wake Lock — mantiene pantalla despierta durante entreno
-  const isWorkoutActive = selectedRoutineId !== null;
+  const isWorkoutActive = ar !== null;
   const { isSupported: wakeLockSupported } = useWakeLock(isWorkoutActive);
 
   // Persistencia de entreno en localStorage
@@ -98,6 +97,16 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, rout
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routinesLoaded, routines]);
+
+  // Una rutina que el coach deja vacante ya no debe quedar abierta para el asesorado.
+  useEffect(() => {
+    if (routinesLoaded && selectedRoutineId && !clientRoutines.some(r => r.id === selectedRoutineId)) {
+      setSelectedRoutineId(null);
+      setCs({});
+      setExpId(null);
+      workoutPersistence.clear();
+    }
+  }, [routinesLoaded, routines, selectedRoutineId, client.id]);
 
   // Timer automático de duración del entreno
   useEffect(() => {
@@ -593,7 +602,7 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, rout
         {tab==='w'&&(<div className="space-y-4">
           {clientRoutines.length === 0 ? (
             <div className="bg-[#141416] border border-[#27272a] p-8 rounded-[16px] text-center text-xs text-[#8e8e93] italic">No tienes rutinas asignadas.</div>
-          ) : selectedRoutineId === null ? (
+          ) : !ar ? (
             <>
               <div className="bg-[#1c1c1f] border border-[#27272a] p-4 rounded-[12px]">
                 <span className="text-[10px] uppercase tracking-widest text-[#d4f826] font-bold block">TU SEMANA</span>
@@ -621,22 +630,6 @@ export const ClientDashboard: React.FC<Props> = ({ client, coach, routines, rout
                     </div>
                   );
                 })}
-                {unassignedRoutines.length > 0 && (
-                  <div className="pt-3 space-y-2">
-                    <h3 className="text-xs font-bold text-[#8e8e93] uppercase">Rutinas sin día asignado</h3>
-                    {unassignedRoutines.map(routine => (
-                      <button
-                        key={routine.id}
-                        type="button"
-                        onClick={() => { setSelectedRoutineId(routine.id); setCs({}); setExpId(null); setWorkoutStartTime(Date.now()); setElapsedMinutes(0); }}
-                        className="w-full bg-[#141416] border border-[#27272a] rounded-[12px] p-4 text-left hover:border-[#d4f826]"
-                      >
-                        <span className="block text-sm font-bold text-white">{routine.name}</span>
-                        <span className="block text-[11px] text-[#8e8e93]">{routine.exercises.length} ejercicios</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </>
           ) : ar ? (
